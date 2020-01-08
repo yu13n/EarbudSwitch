@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="app.tuuure.earbudswitch">
-    <uses-permission android:name="android.permission.BLUETOOTH"/>
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
@@ -20,18 +21,38 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".BHTDialog"
+            android:showOnLockScreen="true"
+            android:theme="@style/dialog_style"
+            android:launchMode="singleInstance">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+            </intent-filter>
+        </activity>
 
-        <activity android:name=".SetupActivity"/>
+        <activity android:name=".SetupActivity" />
 
-        <receiver android:name=".BluetoothMonitor"
-            android:exported="true"
-            android:enabled="true">
+        <receiver
+            android:name=".BluetoothMonitor"
+            android:enabled="true"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
 
-        <service android:name=".EarbudsManager"/>
+        <service
+            android:name=".QuickSetting"
+            android:icon="@drawable/ic_bluetooth"
+            android:label="Bluetooth"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service android:name=".EarbudsManager" />
 
     </application>
 

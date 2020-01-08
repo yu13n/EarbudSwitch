@@ -32,6 +32,6 @@
             android:text="Device"
             android:textSize="20sp"
             android:drawablePadding="12dp"
-            android:drawableStart="@drawable/ic_bluetooth"/>
+            android:drawableLeft="@drawable/ic_bluetooth"/>
     </androidx.cardview.widget.CardView>
 </LinearLayout>

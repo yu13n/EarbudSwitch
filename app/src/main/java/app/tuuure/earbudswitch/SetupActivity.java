@@ -129,10 +129,10 @@ public class SetupActivity extends AppCompatActivity {
     }
 
     @Override
-    protected  void onDestroy(){
+    protected  void onPause(){
         unregisterReceiver(receiver);
         Log.d(TAG, "Receiver unregistered");
-        super.onDestroy();
+        super.onPause();
     }
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {

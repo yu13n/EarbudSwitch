@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">EBS</string>
     <string name="app_title">Earbudswitch</string>
+    <string name="unsupport_ble">BLE is supported on the device</string>
+    <string name="request_permission">ACCESS_FINE_LOCATION permission is needed for BLE scans</string>
 </resources>

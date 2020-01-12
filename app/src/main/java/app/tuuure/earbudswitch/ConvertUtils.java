@@ -1,5 +1,7 @@
 package app.tuuure.earbudswitch;
 
+import android.util.Log;
+
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
@@ -24,11 +26,11 @@ class ConvertUtils {
                 hex.append("0");
             }
             hex.append(Integer.toHexString(b & 0xFF));
-            StringBuilder builder = new StringBuilder(32);
-            for (int i = 8; i <= 23; i += 5) {
-                hex.insert(i, "-");
-            }
         }
+        for (int i = 8; i <= 23; i += 5) {
+            hex.insert(i, "-");
+        }
+        Log.d("Con",hex.toString());
         return UUID.fromString(hex.toString());
     }
 

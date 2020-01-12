@@ -26,7 +26,6 @@ public class BleServer {
     public static final String TAG = "BleServer";
 
     private Context mContext;
-    private BluetoothManager bluetoothManager;
     private BluetoothAdapter bluetoothAdapter;
     private UUID deviceUUID;
     private UUID saltUUID;
@@ -37,22 +36,20 @@ public class BleServer {
 
     private A2dpManager a2dpManager;
 
-    public BleServer(Context context, BluetoothDevice device) {
+    BleServer(Context context, BluetoothDevice device, BluetoothAdapter adapter, A2dpManager manager) {
         mContext = context;
-        //初始化蓝牙服务
-        bluetoothManager = (BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
-        bluetoothAdapter = bluetoothManager.getAdapter();
-        a2dpManager = new A2dpManager(context, bluetoothAdapter);
+        bluetoothAdapter = adapter;
+        a2dpManager = manager;
         bluetoothDevice = device;
-        String deviceName = bluetoothDevice.getName();
-        if (deviceName == null) {
-            deviceUUID = md5code32(bluetoothDevice.getAddress());
-        } else {
-            deviceUUID = md5code32(bluetoothDevice.getName() + bluetoothDevice.getAddress());
-        }
+        deviceUUID = md5code32(bluetoothDevice.getAddress());
+        Log.d(TAG, "deviceUUID: " + deviceUUID.toString());
         saltUUID = UUID.randomUUID();
-        String auth = "";   //TODO: acquire from sharepreference
+        Log.d(TAG, "saltUUID: " + saltUUID.toString());
+        String auth = mContext.getSharedPreferences(mContext.getString(R.string.app_title), Context.MODE_PRIVATE).getString("key", "114514");
+        Log.d(TAG, "auth: " + auth);
         authCode = uuidToBytes(md5code32(saltUUID.toString() + auth));
+        openGattServer();
+        advertise();
     }
 
     //广播Callback
@@ -70,7 +67,7 @@ public class BleServer {
         }
     };
 
-    public void advertise() {
+    void advertise() {
         bluetoothLeAdvertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
         AdvertiseSettings advertiseSettings = new AdvertiseSettings.Builder()
                 .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
@@ -85,7 +82,7 @@ public class BleServer {
         bluetoothLeAdvertiser.startAdvertising(advertiseSettings, advertiseData, advertiseCallback);
     }
 
-    public void stopAdvertise() {
+    void stopAdvertise() {
         if (bluetoothLeAdvertiser != null) {
             bluetoothLeAdvertiser.stopAdvertising(advertiseCallback);
         }
@@ -114,7 +111,7 @@ public class BleServer {
         //特征值写入回调
         @Override
         public void onCharacteristicWriteRequest(BluetoothDevice device, int requestId, BluetoothGattCharacteristic characteristic, boolean preparedWrite, boolean responseNeeded, int offset, byte[] value) {
-            if(Arrays.equals(value,authCode)){
+            if (Arrays.equals(value, authCode)) {
                 //验证通过，则断开耳机
                 a2dpManager.disconnect(bluetoothDevice);
             }
@@ -129,7 +126,7 @@ public class BleServer {
         }
     };
 
-    public void openGattServer() {
+    void openGattServer() {
         BluetoothGattService gattService = new BluetoothGattService(deviceUUID, BluetoothGattService.SERVICE_TYPE_PRIMARY);
         BluetoothGattCharacteristic gattCharacteristic = new BluetoothGattCharacteristic(deviceUUID,
                 BluetoothGattCharacteristic.PROPERTY_READ |
@@ -139,16 +136,12 @@ public class BleServer {
 
         gattService.addCharacteristic(gattCharacteristic);
 
-        gattServer = bluetoothManager.openGattServer(mContext, gattServerCallback);
+        gattServer = ((BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE))
+                .openGattServer(mContext, gattServerCallback);
         boolean result = gattServer.addService(gattService);
-//        if (result) {
-//            Toast.makeText(this, "添加服务成功", Toast.LENGTH_SHORT).show();
-//        } else {
-//            Toast.makeText(this, "添加服务失败", Toast.LENGTH_SHORT).show();
-//        }
     }
 
-    public void stopGattServer() {
+    void stopGattServer() {
         gattServer.close();
     }
 }

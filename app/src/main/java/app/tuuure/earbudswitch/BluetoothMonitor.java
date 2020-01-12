@@ -23,6 +23,7 @@ public class BluetoothMonitor extends BroadcastReceiver {
             switch (state) {
                 case BluetoothProfile.STATE_CONNECTED:
                     Intent service = new Intent(context, EarbudsManager.class);
+                    service.putExtra("ops",EarbudsManager.ACTION_ADVERTISE);
                     service.putExtra(BluetoothDevice.EXTRA_DEVICE, device);
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         context.startForegroundService(service);

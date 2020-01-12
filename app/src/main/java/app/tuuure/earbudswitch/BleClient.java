@@ -1,13 +1,11 @@
 package app.tuuure.earbudswitch;
 
-import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
-import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
@@ -15,7 +13,6 @@ import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.os.ParcelUuid;
 import android.util.Log;
 
@@ -27,58 +24,38 @@ import static app.tuuure.earbudswitch.ConvertUtils.md5code32;
 import static app.tuuure.earbudswitch.ConvertUtils.uuidToBytes;
 
 public class BleClient {
-    public static final String TAG = "BleClient";
+    static final String TAG = "BleClient";
 
     private Context mContext;
-    BluetoothManager bluetoothManager;
-    BluetoothAdapter bluetoothAdapter;
+    private BluetoothAdapter bluetoothAdapter;
     private BluetoothDevice bluetoothDevice;
     private UUID deviceUUID;
     private String auth;
     private BluetoothLeScanner bluetoothLeScanner;
     private BluetoothGattService bluetoothGattService;
     private BluetoothGatt bluetoothGatt;
-    private A2dpManager a2dpManager;
+    A2dpManager a2dpManager;
 
-    Boolean isSetupNeeded = true;
-
-    public BleClient(Context context) {
+    BleClient(Context context, BluetoothDevice device, BluetoothAdapter adapter, A2dpManager manager) {
         mContext = context;
-        initBluetooth();
-        auth = "";  //TODO: acquire from sharepreference
-    }
-
-    void initBluetooth(){
-        if(mContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
-            //初始化蓝牙服务
-            bluetoothManager = (BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
-            if(bluetoothManager != null && mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)){
-                bluetoothAdapter = bluetoothManager.getAdapter();
-                if(bluetoothAdapter.isEnabled()){
-                    //a2dpManager = new A2dpManager(mContext, bluetoothAdapter);
-                    isSetupNeeded = false;
-                }
-            }
-        }
-    }
-
-    void setTargetDevice(BluetoothDevice device){
+        bluetoothAdapter = adapter;
+        a2dpManager = manager;
+        auth = mContext.getSharedPreferences(mContext.getString(R.string.app_title), Context.MODE_PRIVATE).getString("key", "114514");
+        Log.d(TAG,auth);
         bluetoothDevice = device;
-        String deviceName = bluetoothDevice.getName();
-        if (deviceName == null) {
-            deviceUUID = md5code32(bluetoothDevice.getAddress());
-        } else {
-            deviceUUID = md5code32(bluetoothDevice.getName() + bluetoothDevice.getAddress());
-        }
+        deviceUUID = md5code32(bluetoothDevice.getAddress());
+        Log.d(TAG,deviceUUID.toString());
+        scanBle();
     }
+
 
     private BluetoothGattCallback bluetoothGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             super.onConnectionStateChange(gatt, status, newState);
-            Log.d(TAG,"StateChange " + status +"_"+newState);
-            if(status == BluetoothGatt.GATT_SUCCESS){
-                if(newState == BluetoothProfile.STATE_CONNECTED){
+            Log.d(TAG, "StateChange " + status + "_" + newState);
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                if (newState == BluetoothProfile.STATE_CONNECTED) {
                     bluetoothGatt.discoverServices();
                 }
             }
@@ -87,8 +64,8 @@ public class BleClient {
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             super.onServicesDiscovered(gatt, status);
-            Log.d("TEST","Connected");
-            if(status == BluetoothGatt.GATT_SUCCESS){
+            Log.d("TEST", "Connected");
+            if (status == BluetoothGatt.GATT_SUCCESS) {
                 bluetoothGattService = bluetoothGatt.getService(deviceUUID);
                 BluetoothGattCharacteristic gattCharacteristic = bluetoothGattService.getCharacteristic(deviceUUID);
                 bluetoothGatt.readCharacteristic(gattCharacteristic);
@@ -98,21 +75,22 @@ public class BleClient {
         @Override
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             super.onCharacteristicRead(gatt, characteristic, status);
-            Log.d("TEST","Read");
+            Log.d("TEST", "Read");
             UUID saltUUID = UUID.nameUUIDFromBytes(characteristic.getValue());
             Log.d("Read", saltUUID.toString());
-            Log.d(TAG,"Read complete");
+            Log.d(TAG, "Read complete");
 
             byte[] authCode = uuidToBytes(md5code32(saltUUID.toString() + auth));
             characteristic.setValue(authCode);
-            if(bluetoothGatt.writeCharacteristic(characteristic)){
-                Log.d(TAG,"Write");
+            if (bluetoothGatt.writeCharacteristic(characteristic)) {
+                Log.d(TAG, "Write");
             }
         }
 
         @Override
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            Log.d("TEST","Characteristic Writed");
+            Log.d("TEST", "Characteristic Writed");
+            a2dpManager.connect(bluetoothDevice);
             super.onCharacteristicWrite(gatt, characteristic, status);
         }
     };
@@ -121,10 +99,10 @@ public class BleClient {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             super.onScanResult(callbackType, result);
-            Log.d("TEST","Discovered " + result.getDevice().getName());
+            Log.d("TEST", "Discovered " + result.getDevice().getName());
 
             bluetoothLeScanner.stopScan(scanCallback);
-            bluetoothGatt = result.getDevice().connectGatt(mContext,false,bluetoothGattCallback);
+            bluetoothGatt = result.getDevice().connectGatt(mContext, false, bluetoothGattCallback);
         }
 
         @Override
@@ -138,7 +116,7 @@ public class BleClient {
         }
     };
 
-    public void scanBle(){
+    void scanBle() {
         bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
 
         List<ScanFilter> filters = new ArrayList<>();
@@ -153,6 +131,6 @@ public class BleClient {
                 .build();
 
         bluetoothLeScanner.startScan(filters, scanSettings, scanCallback);
-        Log.d("TEST","Scanning");
+        Log.d("TEST", "Scanning");
     }
 }

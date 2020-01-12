@@ -1,26 +1,133 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
-    tools:context=".MainActivity">
+    tools:context=".MainActivity"
+    android:id="@+id/main_layout"
+    android:animateLayoutChanges="true"
+    android:focusable="true"
+    android:focusableInTouchMode="true">
+
+
     <androidx.appcompat.widget.Toolbar
-        android:layout_width="match_parent"
+        android:id="@+id/main_toolbar"
+        android:layout_width="0dp"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/colorPrimary"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
         app:title="@string/app_title"
-        app:titleTextColor="#fff"/>
+        app:titleTextColor="#fff" />
+
+    <TextView
+        android:id="@+id/tv_welcome"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Welcome"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toTopOf="@id/tv_location"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/guideline_top" />
 
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_devicesfound"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginStart="12dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="12dp" />
+    <TextView
+        android:id="@+id/tv_location"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Location Permission"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toTopOf="@+id/tv_bht_state"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toLeftOf="@+id/sw_location"
+        app:layout_constraintTop_toBottomOf="@id/tv_welcome" />
 
+    <Switch
+        android:id="@+id/sw_location"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:showText="false"
+        app:layout_constraintLeft_toRightOf="@+id/tv_location"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="@id/tv_location" />
 
-</LinearLayout>
+    <TextView
+        android:id="@+id/tv_bht_state"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Bluetooth State"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toTopOf="@id/tv_advertise"
+        app:layout_constraintLeft_toLeftOf="@id/tv_location"
+        app:layout_constraintTop_toBottomOf="@id/tv_location" />
+
+    <Switch
+        android:id="@+id/sw_bht_state"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:showText="false"
+        app:layout_constraintRight_toRightOf="@id/sw_location"
+        app:layout_constraintTop_toTopOf="@id/tv_bht_state" />
+
+    <TextView
+        android:id="@+id/tv_advertise"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Advertise"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toTopOf="@id/et_key"
+        app:layout_constraintLeft_toLeftOf="@id/tv_bht_state"
+        app:layout_constraintTop_toBottomOf="@id/tv_bht_state" />
+
+    <Switch
+        android:id="@+id/sw_advertise"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:showText="false"
+        app:layout_constraintRight_toRightOf="@id/sw_bht_state"
+        app:layout_constraintTop_toTopOf="@id/tv_advertise" />
+
+    <EditText
+        android:id="@+id/et_key"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:drawableLeft="@drawable/ic_key"
+        android:drawablePadding="12dp"
+        android:ems="10"
+        android:hint="key"
+        android:inputType="textNoSuggestions"
+        android:imeOptions="actionNone"
+        app:layout_constraintBottom_toBottomOf="@id/guideline_bottom"
+        app:layout_constraintLeft_toLeftOf="@id/tv_advertise"
+        app:layout_constraintRight_toLeftOf="@id/ib_done"
+        app:layout_constraintTop_toBottomOf="@id/tv_advertise" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_top"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.25" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_bottom"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.8" />
+
+    <ImageButton
+        android:id="@+id/ib_done"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:srcCompat="@drawable/ic_done"
+        app:layout_constraintBottom_toBottomOf="@id/et_key"
+        app:layout_constraintTop_toTopOf="@id/et_key"
+        app:layout_constraintLeft_toRightOf="@id/et_key"
+        app:layout_constraintRight_toRightOf="@id/sw_advertise"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

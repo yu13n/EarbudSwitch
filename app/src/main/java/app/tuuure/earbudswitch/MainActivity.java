@@ -5,9 +5,11 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.content.ContextCompat;
+import androidx.appcompat.widget.Toolbar;
 
 import android.Manifest;
 import android.animation.LayoutTransition;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
@@ -18,6 +20,15 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.pm.ShortcutInfo;
+import android.content.pm.ShortcutManager;
+import android.content.res.ColorStateList;
+import android.content.res.Configuration;
+import android.content.res.TypedArray;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.Icon;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -30,6 +41,8 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
@@ -41,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
 
     private Switch swLocation;
     private Switch swBluetooth;
+    private Switch swAdvertise;
     private EditText etKey;
     private SharedPreferences sp;
 
@@ -73,9 +87,12 @@ public class MainActivity extends AppCompatActivity {
 
         swLocation = findViewById(R.id.sw_location);
         swBluetooth = findViewById(R.id.sw_bht_state);
-        final Switch swAdvertise = findViewById(R.id.sw_advertise);
+        swAdvertise = findViewById(R.id.sw_advertise);
         etKey = findViewById(R.id.et_key);
         ConstraintLayout mainLayout = findViewById(R.id.main_layout);
+
+        Toolbar toolbar = findViewById(R.id.main_toolbar);
+        setSupportActionBar(toolbar);
 
         String key = sp.getString("key", "");
         if (key.length() == 0) {
@@ -171,11 +188,86 @@ public class MainActivity extends AppCompatActivity {
         swBluetooth.setChecked(isBluetoothOn);
         swAdvertise.setChecked(getPackageManager().getComponentEnabledSetting(monitor) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED);
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+            registerShortCut();
+        }
+    }
+
+    @TargetApi(25)
+    private void registerShortCut() {
+        ShortcutManager mShortcutManager = getSystemService(ShortcutManager.class);
+        List<ShortcutInfo> infos = new ArrayList<>();
+
+        // 按下返回button跳转的activity
+        Intent intent = new Intent(this, BHTDialog.class);
+        intent.setAction(Intent.ACTION_VIEW);
+        ShortcutInfo info = new ShortcutInfo.Builder(this, "bhtdialog")
+                .setShortLabel("Scan")
+                .setLongLabel("Scan")
+                .setIcon(Icon.createWithResource(this, R.mipmap.ic_bluetooth))
+                .setIntent(intent)
+                .build();
+        infos.add(info);
+
+        mShortcutManager.setDynamicShortcuts(infos);
+    }
+
+    private void setSwitchAccent(Switch v, int[] thumbColor, int[] trackColor) {
+        ColorStateList thumbStates = new ColorStateList(
+                new int[][]{
+                        {android.R.attr.state_checked, android.R.attr.state_enabled},
+                        {-android.R.attr.state_checked, android.R.attr.state_enabled},
+                        {}
+                },
+                thumbColor
+        );
+        v.setThumbTintList(thumbStates);
+
+        ColorStateList trackStates = new ColorStateList(
+//                new int[][]{
+//                        {android.R.attr.state_checked, android.R.attr.state_enabled},
+//                        {-android.R.attr.state_checked, android.R.attr.state_enabled}
+//                },
+                new int[][]{
+                        new int[]{android.R.attr.state_checked},
+                        new int[]{-android.R.attr.state_checked}
+                },
+                trackColor
+        );
+        v.setTrackTintList(trackStates);
+        v.setTrackTintMode(PorterDuff.Mode.OVERLAY);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+
+        int thumbOffColor;
+        int trackOffColor;
+
+        if (Configuration.UI_MODE_NIGHT_YES == (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)) {
+            Log.d(TAG, "night");
+            // Night mode is active, we're using dark theme
+            thumbOffColor = getColor(R.color.color_switch_thumb_off_night);
+            trackOffColor = getColor(R.color.color_switch_track_off_night);
+        } else {
+            // Night mode is not active, we're using the light theme
+            Log.d(TAG, "Day");
+            thumbOffColor = getColor(R.color.color_switch_thumb_off_day);
+            trackOffColor = getColor(R.color.color_switch_track_off_day);
+        }
+
+        TypedArray array = obtainStyledAttributes(android.R.style.Theme_DeviceDefault, new int[]{
+                android.R.attr.colorAccent
+        });
+        int thumbOnColor = array.getColor(0, getColor(R.color.color_theme));
+        array.recycle();
+        int[] thumbColor = {thumbOnColor, thumbOffColor, thumbOffColor};
+        int trackOnColor = Color.argb(77, Color.red(thumbOnColor), Color.green(thumbOnColor), Color.blue(thumbOnColor));
+        int[] trackColor = {trackOnColor, trackOffColor, trackOffColor};
+        setSwitchAccent(swLocation, thumbColor, trackColor);
+        setSwitchAccent(swBluetooth, thumbColor, trackColor);
+        setSwitchAccent(swAdvertise, thumbColor, trackColor);
 
         isPermissionGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
         swLocation.setChecked(isPermissionGranted);

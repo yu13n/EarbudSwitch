@@ -3,8 +3,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/action_system_settings"
-        android:icon="@drawable/ic_system_setting"
+        android:icon="@drawable/ac_setting"
         android:title="System Settings"
-        app:showAsAction="always"/>
+        app:iconTint="?attr/actionMenuTextColor"
+        app:showAsAction="always" />
 
 </menu>

@@ -1,21 +1,29 @@
 package app.tuuure.earbudswitch;
 
+import android.bluetooth.BluetoothA2dp;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothHeadset;
 import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothProfile;
+import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanFilter;
+import android.bluetooth.le.ScanResult;
+import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
-import android.os.Build;
 import android.os.Bundle;
+import android.os.ParcelUuid;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.widget.Toolbar;
@@ -24,12 +32,26 @@ import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
+import static app.tuuure.earbudswitch.ConvertUtils.md5code32;
+
 
 public class BHTDialog extends AppCompatActivity {
     final String TAG = "EBSDialog";
     RecyclerView rvDialog;
     DevicesAdapter rvAdapter;
     private Context mContext;
+    private BluetoothManager bluetoothManager;
+    private BluetoothAdapter bluetoothAdapter;
+    private String auth;
+    private BluetoothLeScanner bluetoothLeScanner;
+    ProfileManager profileManager;
+    HashMap<String, String> boundeDevices = new HashMap<>(10);
+    BleClient client;
+    Toolbar toolbar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,46 +62,142 @@ public class BHTDialog extends AppCompatActivity {
         Window window = getWindow();
         window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
+        toolbar = findViewById(R.id.tb_dialog);
+        setSupportActionBar(toolbar);
+
         rvDialog = findViewById(R.id.rv_dialog);
         LinearLayoutManager mLinearLayoutManager = new LinearLayoutManager(this);
         mLinearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
         rvDialog.setLayoutManager(mLinearLayoutManager);
         rvDialog.setItemAnimator(new DefaultItemAnimator());
-
-        BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-        if (bluetoothManager == null) {
-            Toast.makeText(this, "设备不支持BLE", Toast.LENGTH_SHORT).show();
-            finish();
-        }
-        BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
-        if (!bluetoothAdapter.isEnabled()) {
-            bluetoothAdapter.enable();
-        }
-
-        rvAdapter = new DevicesAdapter(bluetoothAdapter.getBondedDevices());
+        rvAdapter = new DevicesAdapter();
         rvAdapter.setOnItemClickListener(new DevicesAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(View view, int position) {
-                BluetoothDevice device = (BluetoothDevice) rvAdapter.devices.toArray()[position];
-                Log.d(TAG, device.getName() + device.getAddress());
-                //TextView tvDevice = view.findViewById(R.id.tv_device);
+                RecycleItem item = (RecycleItem) rvAdapter.devices.toArray()[position];
+                Log.d(TAG, item.budsName + item.serverAddress);
 
-                Intent service = new Intent(mContext, EarbudsManager.class);
-                service.putExtra("ops", EarbudsManager.ACTION_SCAN);
-                service.putExtra(BluetoothDevice.EXTRA_DEVICE, device);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    startForegroundService(service);
-                } else {
-                    startService(service);
-                }
-                finish();
+                client = new BleClient(mContext, bluetoothAdapter.getRemoteDevice(item.budsAddress), bluetoothAdapter, profileManager);
+                client.bluetoothGatt = bluetoothAdapter.getRemoteDevice(item.serverAddress)
+                        .connectGatt(mContext, false, client.bluetoothGattCallback);
             }
         });
         rvDialog.setAdapter(rvAdapter);
 
-        Toolbar toolbar = findViewById(R.id.tb_dialog);
-        //toolbar.inflateMenu(R.menu.menu_quicksetting);
-        setSupportActionBar(toolbar);
+        bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        if (bluetoothManager == null) {
+            Toast.makeText(this, "设备不支持BLE", Toast.LENGTH_SHORT).show();
+            finish();
+        }
+        bluetoothAdapter = bluetoothManager.getAdapter();
+        if (!bluetoothAdapter.isEnabled()) {
+            bluetoothAdapter.enable();
+        }
+        profileManager = new ProfileManager(this, bluetoothAdapter, a2dpListener);
+
+        for (BluetoothDevice device : bluetoothAdapter.getBondedDevices()) {
+            if (BluetoothClass.Device.Major.AUDIO_VIDEO == device.getBluetoothClass().getMajorDeviceClass()) {
+                boundeDevices.put(md5code32(device.getAddress()), device.getAddress());
+            }
+        }
+    }
+
+    private BluetoothProfile.ServiceListener a2dpListener = new BluetoothProfile.ServiceListener() {
+        @Override
+        public void onServiceDisconnected(int profile) {
+            switch (profile) {
+                case BluetoothProfile.A2DP:
+                    profileManager.setAd2p(null);
+                    break;
+                case BluetoothProfile.HEADSET:
+                    profileManager.setHeadset(null);
+                    break;
+            }
+        }
+
+        @Override
+        public void onServiceConnected(int profile, BluetoothProfile proxy) {
+            switch (profile) {
+                case BluetoothProfile.A2DP:
+                    profileManager.setAd2p((BluetoothA2dp) proxy);
+                    break;
+                case BluetoothProfile.HEADSET:
+                    profileManager.setHeadset((BluetoothHeadset) proxy);
+                    break;
+            }
+        }
+    };
+
+    private ScanCallback scanCallback = new ScanCallback() {
+        @Override
+        public void onScanResult(int callbackType, ScanResult result) {
+            BluetoothDevice server = result.getDevice();
+            String budsAddress = null;
+            String budsName = null;
+            List<ParcelUuid> serviceData = result.getScanRecord().getServiceUuids();
+
+            if (serviceData.isEmpty()) {
+                Log.d(TAG, "Empty ServiceData");
+                super.onScanResult(callbackType, result);
+            }
+
+            for (ParcelUuid uuid : serviceData) {
+                budsAddress = boundeDevices.get(uuid.toString());
+                if (budsAddress != null) {
+                    BluetoothDevice target = bluetoothAdapter.getRemoteDevice(budsAddress);
+                    if (target != null) {
+                        budsName = target.getName();
+                        break;
+                    }
+                }
+            }
+            if (budsAddress != null && budsName != null) {
+                RecycleItem item = new RecycleItem(budsName, budsAddress, server.getAddress());
+                rvAdapter.addDevice(item);
+                Log.d(TAG, "Discovered " + budsName + " Server " + server.getAddress());
+            }
+
+            super.onScanResult(callbackType, result);
+        }
+
+        @Override
+        public void onBatchScanResults(List<ScanResult> results) {
+            super.onBatchScanResults(results);
+        }
+
+        @Override
+        public void onScanFailed(int errorCode) {
+            super.onScanFailed(errorCode);
+        }
+    };
+
+    void scanBle() {
+        bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
+
+        List<ScanFilter> filters = new ArrayList<>(10);
+        ScanFilter.Builder builder = new ScanFilter.Builder();
+
+        if (boundeDevices.isEmpty()) {
+            Log.d(TAG, "Empty Bounded Audio Devices");
+            return;
+        }
+
+        for (String key : boundeDevices.keySet()) {
+            Log.d(TAG, "Ble Scan filter: " + key);
+            ScanFilter filter = builder
+                    .setServiceUuid(ParcelUuid.fromString(key))
+                    .build();
+            filters.add(filter);
+        }
+
+        ScanSettings scanSettings = new ScanSettings.Builder()
+                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
+                .setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
+                .build();
+
+        bluetoothLeScanner.startScan(filters, scanSettings, scanCallback);
+        Log.d(TAG, "Scanning");
     }
 
     @Override
@@ -96,5 +214,24 @@ public class BHTDialog extends AppCompatActivity {
             finish();
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onPause() {
+        bluetoothLeScanner.stopScan(scanCallback);
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        rvAdapter.devicesClear();
+        scanBle();
+    }
+
+    @Override
+    protected void onDestroy() {
+        profileManager.destroy();
+        super.onDestroy();
     }
 }

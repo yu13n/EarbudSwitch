@@ -22,8 +22,7 @@ public class BluetoothMonitor extends BroadcastReceiver {
             int state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1);
             switch (state) {
                 case BluetoothProfile.STATE_CONNECTED:
-                    Intent service = new Intent(context, EarbudsManager.class);
-                    service.putExtra("ops",EarbudsManager.ACTION_ADVERTISE);
+                    Intent service = new Intent(context, EarbudService.class);
                     service.putExtra(BluetoothDevice.EXTRA_DEVICE, device);
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         context.startForegroundService(service);
@@ -35,7 +34,7 @@ public class BluetoothMonitor extends BroadcastReceiver {
                     break;
                 case BluetoothProfile.STATE_DISCONNECTED:
                     Intent stopIntent = new Intent();
-                    stopIntent.setAction(EarbudsManager.CHANNEL_ID);
+                    stopIntent.setAction(EarbudService.CHANNEL_ID);
                     context.sendBroadcast(stopIntent);
 
                     Log.d(TAG, "Bluetooth Device " + device.getName() + " Disconnected");

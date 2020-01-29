@@ -19,11 +19,10 @@ import android.util.Log;
 import java.util.Arrays;
 import java.util.UUID;
 
-import static app.tuuure.earbudswitch.ConvertUtils.md5code32;
-import static app.tuuure.earbudswitch.ConvertUtils.uuidToBytes;
+import static app.tuuure.earbudswitch.ConvertUtils.*;
 
-public class BleServer {
-    public static final String TAG = "BleServer";
+class BleServer {
+    private static final String TAG = "BleServer";
 
     private Context mContext;
     private BluetoothAdapter bluetoothAdapter;
@@ -34,20 +33,21 @@ public class BleServer {
     private BluetoothLeAdvertiser bluetoothLeAdvertiser;
     private BluetoothGattServer gattServer;
 
-    private A2dpManager a2dpManager;
+    private ProfileManager profileManager;
 
-    BleServer(Context context, BluetoothDevice device, BluetoothAdapter adapter, A2dpManager manager) {
+    BleServer(Context context, BluetoothDevice device, BluetoothAdapter adapter, ProfileManager manager) {
         mContext = context;
-        bluetoothAdapter = adapter;
-        a2dpManager = manager;
         bluetoothDevice = device;
-        deviceUUID = md5code32(bluetoothDevice.getAddress());
+        bluetoothAdapter = adapter;
+        profileManager = manager;
+
+        deviceUUID = UUID.fromString(md5code32(bluetoothDevice.getAddress()));
         Log.d(TAG, "deviceUUID: " + deviceUUID.toString());
         saltUUID = UUID.randomUUID();
         Log.d(TAG, "saltUUID: " + saltUUID.toString());
         String auth = mContext.getSharedPreferences(mContext.getString(R.string.app_title), Context.MODE_PRIVATE).getString("key", "114514");
         Log.d(TAG, "auth: " + auth);
-        authCode = uuidToBytes(md5code32(saltUUID.toString() + auth));
+        authCode = uuidToBytes(UUID.fromString(md5code32(saltUUID.toString() + auth)));
         openGattServer();
         advertise();
     }
@@ -56,28 +56,27 @@ public class BleServer {
     private final AdvertiseCallback advertiseCallback = new AdvertiseCallback() {
         @Override
         public void onStartSuccess(AdvertiseSettings settingsInEffect) {
-            super.onStartSuccess(settingsInEffect);
             Log.d(TAG, "advertising");
+            super.onStartSuccess(settingsInEffect);
         }
 
         @Override
         public void onStartFailure(int errorCode) {
-            super.onStartFailure(errorCode);
             Log.d(TAG, "advertise error: " + errorCode);
+            super.onStartFailure(errorCode);
         }
     };
 
-    void advertise() {
+    private void advertise() {
         bluetoothLeAdvertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
         AdvertiseSettings advertiseSettings = new AdvertiseSettings.Builder()
-                .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
+                .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER)
                 .setConnectable(true)
                 .setTimeout(0)
-                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_LOW)
+                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_ULTRA_LOW)
                 .build();
         AdvertiseData advertiseData = new AdvertiseData.Builder()
                 .addServiceUuid(new ParcelUuid(deviceUUID))
-                .setIncludeDeviceName(true)
                 .build();
         bluetoothLeAdvertiser.startAdvertising(advertiseSettings, advertiseData, advertiseCallback);
     }
@@ -104,29 +103,44 @@ public class BleServer {
         //特征值读取回调
         @Override
         public void onCharacteristicReadRequest(BluetoothDevice device, int requestId, int offset, BluetoothGattCharacteristic characteristic) {
-            gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, uuidToBytes(saltUUID));
+            Log.d(TAG, "onCharacteristicReadRequest");
+            gattServer.sendResponse(
+                    device,
+                    requestId,
+                    BluetoothGatt.GATT_SUCCESS,
+                    0,
+                    uuidToBytes(saltUUID)
+            );
             super.onCharacteristicReadRequest(device, requestId, offset, characteristic);
         }
 
         //特征值写入回调
         @Override
         public void onCharacteristicWriteRequest(BluetoothDevice device, int requestId, BluetoothGattCharacteristic characteristic, boolean preparedWrite, boolean responseNeeded, int offset, byte[] value) {
+            Log.d(TAG, "onCharacteristicWriteRequest");
+            Log.d("Receive", bytesToUUID(value).toString());
+            Log.d("Receive", bytesToUUID(authCode).toString());
             if (Arrays.equals(value, authCode)) {
                 //验证通过，则断开耳机
-                a2dpManager.disconnect(bluetoothDevice);
+                Log.d(TAG, "Autherized. Earbuds Disconnecting...");
+
+                profileManager.a2dpDisconnect(bluetoothDevice);
+                profileManager.headSetDisconnect(bluetoothDevice);
             }
             if (responseNeeded) {
-                gattServer.sendResponse(device,
+                gattServer.sendResponse(
+                        device,
                         requestId,
                         BluetoothGatt.GATT_SUCCESS,
                         0,
-                        null);
+                        null
+                );
             }
             super.onCharacteristicWriteRequest(device, requestId, characteristic, preparedWrite, responseNeeded, offset, value);
         }
     };
 
-    void openGattServer() {
+    private void openGattServer() {
         BluetoothGattService gattService = new BluetoothGattService(deviceUUID, BluetoothGattService.SERVICE_TYPE_PRIMARY);
         BluetoothGattCharacteristic gattCharacteristic = new BluetoothGattCharacteristic(deviceUUID,
                 BluetoothGattCharacteristic.PROPERTY_READ |
@@ -135,9 +149,8 @@ public class BleServer {
                         BluetoothGattCharacteristic.PERMISSION_WRITE);
 
         gattService.addCharacteristic(gattCharacteristic);
-
-        gattServer = ((BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE))
-                .openGattServer(mContext, gattServerCallback);
+        BluetoothManager bluetoothManager = (BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
+        gattServer = bluetoothManager.openGattServer(mContext, gattServerCallback);
         boolean result = gattServer.addService(gattService);
     }
 

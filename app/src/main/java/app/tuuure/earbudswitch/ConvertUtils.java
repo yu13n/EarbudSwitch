@@ -1,23 +1,19 @@
 package app.tuuure.earbudswitch;
 
-import android.util.Log;
-
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
 class ConvertUtils {
 
-    static UUID md5code32(String content) {
+    static String md5code32(String content) {
         byte[] hash;
         try {
-            hash = MessageDigest.getInstance("MD5").digest(content.getBytes("UTF-8"));
+            hash = MessageDigest.getInstance("MD5").digest(content.getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("NoSuchAlgorithmException", e);
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("UnsupportedEncodingException", e);
         }
         //对生成的16字节数组进行补零操作
         StringBuilder hex = new StringBuilder(hash.length * 2);
@@ -30,8 +26,7 @@ class ConvertUtils {
         for (int i = 8; i <= 23; i += 5) {
             hex.insert(i, "-");
         }
-        Log.d("Con",hex.toString());
-        return UUID.fromString(hex.toString());
+        return hex.toString();
     }
 
     static byte[] uuidToBytes(UUID uuid) {
@@ -41,19 +36,10 @@ class ConvertUtils {
         return bb.array();
     }
 
-//    public static String bytesToHexString(byte... src) {
-//        StringBuilder stringBuilder = new StringBuilder();
-//        if (src == null || src.length <= 0) {
-//            return null;
-//        }
-//        for (int i = 0; i < src.length; i++) {
-//            int v = src[i] & 0xFF;
-//            String hv = Integer.toHexString(v);
-//            if (hv.length() < 2) {
-//                stringBuilder.append(0);
-//            }
-//            stringBuilder.append(hv);
-//        }
-//        return stringBuilder.toString();
-//    }
+    static UUID bytesToUUID(byte[] inputByteArray) {
+        ByteBuffer bb = ByteBuffer.wrap(inputByteArray);
+        long firstLong = bb.getLong();
+        long secondLong = bb.getLong();
+        return new UUID(firstLong, secondLong);
+    }
 }

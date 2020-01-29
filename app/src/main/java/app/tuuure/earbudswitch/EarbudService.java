@@ -9,6 +9,7 @@ import android.app.Service;
 import android.bluetooth.BluetoothA2dp;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothHeadset;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.BroadcastReceiver;
@@ -23,24 +24,18 @@ import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 
-import java.util.UUID;
-
-public class EarbudsManager extends Service {
+public class EarbudService extends Service {
     private static final String PACKNAME = "app.tuuure.earbudswitch";
-    static final String CHANNEL_ID = PACKNAME + ".EarbudsManager";
+    static final String CHANNEL_ID = PACKNAME + ".EarbudService";
     static final String CHANNEL_NAME = "Foreground Service";
-    static final String TAG = "EarbudsManager";
-    static final int ACTION_SCAN = 11;
-    static final int ACTION_ADVERTISE = 12;
+    static final String TAG = "EarbudService";
 
     private Context mContext;
     private BluetoothManager bluetoothManager;
     private BluetoothAdapter bluetoothAdapter;
-    private BleClient client;
     private BleServer server;
     private BluetoothDevice bluetoothDevice;
-    private int ops;
-    A2dpManager a2dpManager;
+    ProfileManager profileManager;
 
     // 监听蓝牙关闭与自定义广播，用于关闭service
     private BroadcastReceiver receiver = new BroadcastReceiver() {
@@ -50,21 +45,29 @@ public class EarbudsManager extends Service {
             if (action == null) {
                 return;
             }
+            int state = -1;
             switch (action) {
                 case BluetoothAdapter.ACTION_STATE_CHANGED:
-                    int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1);
-                    if (state != BluetoothAdapter.STATE_OFF) {
-                        break;
+                    if (state == -1) {
+                        state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1);
+                        if (state != BluetoothAdapter.STATE_OFF) {
+                            break;
+                        }
+                        Log.d(TAG, "Bluetooth Turning off");
                     }
-                    Log.d(TAG, "Bluetooth Turning off");
+                case BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED:
+                    if (state == -1) {
+                        state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1);
+                        if (state != BluetoothProfile.STATE_DISCONNECTED) {
+                            break;
+                        }
+                        Log.d(TAG, "Bluetooth Turning off");
+                    }
                 case CHANNEL_ID:
                     Log.d(TAG, "Service stop self");
+                    server.stopAdvertise();
+                    server.stopGattServer();
                     stopSelf();
-                    break;
-                case BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED:
-                    if (BluetoothProfile.STATE_CONNECTED == intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1) && ops == ACTION_SCAN) {
-                        stopSelf();
-                    }
                     break;
             }
         }
@@ -102,28 +105,37 @@ public class EarbudsManager extends Service {
         Log.d(TAG, "Receiver registered");
 
         initBluetooth();
+
+        profileManager = new ProfileManager(this, bluetoothAdapter, proxyListener);
     }
 
-    private BluetoothProfile.ServiceListener a2dpListener = new BluetoothProfile.ServiceListener() {
+    private BluetoothProfile.ServiceListener proxyListener = new BluetoothProfile.ServiceListener() {
         @Override
         public void onServiceDisconnected(int profile) {
-            if (profile == BluetoothProfile.A2DP) {
-                a2dpManager.setAd2p(null);
+            switch (profile) {
+                case BluetoothProfile.A2DP:
+                    profileManager.setAd2p(null);
+                    break;
+                case BluetoothProfile.HEADSET:
+                    profileManager.setHeadset(null);
+                    break;
             }
         }
 
         @Override
         public void onServiceConnected(int profile, BluetoothProfile proxy) {
-            if (profile == BluetoothProfile.A2DP) {
-                a2dpManager.setAd2p((BluetoothA2dp) proxy);//转换
-                switch (ops) {
-                    case ACTION_SCAN:
-                        client = new BleClient(mContext, bluetoothDevice, bluetoothAdapter, a2dpManager);
-                        break;
-                    case ACTION_ADVERTISE:
-                        server = new BleServer(mContext, bluetoothDevice, bluetoothAdapter, a2dpManager);
-                        break;
-                }
+            switch (profile) {
+                case BluetoothProfile.A2DP:
+                    profileManager.setAd2p((BluetoothA2dp) proxy);
+                    break;
+                case BluetoothProfile.HEADSET:
+                    profileManager.setHeadset((BluetoothHeadset) proxy);
+                    break;
+            }
+            if (profileManager.isProxyInited()) {
+
+                //启动广播server
+                server = new BleServer(mContext, bluetoothDevice, bluetoothAdapter, profileManager);
             }
         }
     };
@@ -152,19 +164,13 @@ public class EarbudsManager extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        ops = intent.getIntExtra("ops", 0);
-        Log.d(TAG, String.valueOf(ops));
-        if (ops == 0) {
-            stopSelf();
-        }
         bluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-        a2dpManager = new A2dpManager(this, bluetoothAdapter, a2dpListener);
         return START_REDELIVER_INTENT;
     }
 
     @Override
     public void onDestroy() {
-        a2dpManager.destroy();
+        profileManager.destroy();
 
         unregisterReceiver(receiver);
         Log.d(TAG, "Receiver unregistered");

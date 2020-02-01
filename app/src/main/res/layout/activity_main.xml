@@ -25,7 +25,7 @@
         android:id="@+id/tv_welcome"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Welcome"
+        android:text="@string/welcome_text"
         android:textSize="20sp"
         app:layout_constraintBottom_toTopOf="@id/tv_location"
         app:layout_constraintLeft_toLeftOf="parent"
@@ -37,7 +37,7 @@
         android:id="@+id/tv_location"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Location Permission"
+        android:text="@string/location_permission"
         android:textSize="16sp"
         app:layout_constraintBottom_toTopOf="@+id/tv_bht_state"
         app:layout_constraintLeft_toLeftOf="parent"
@@ -57,9 +57,9 @@
         android:id="@+id/tv_bht_state"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Bluetooth State"
+        android:text="@string/bluetooth_state"
         android:textSize="16sp"
-        app:layout_constraintBottom_toTopOf="@id/tv_advertise"
+        app:layout_constraintBottom_toTopOf="@id/tv_enable"
         app:layout_constraintLeft_toLeftOf="@id/tv_location"
         app:layout_constraintTop_toBottomOf="@id/tv_location" />
 
@@ -72,38 +72,39 @@
         app:layout_constraintTop_toTopOf="@id/tv_bht_state" />
 
     <TextView
-        android:id="@+id/tv_advertise"
+        android:id="@+id/tv_enable"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Advertise"
+        android:text="@string/enable_text"
         android:textSize="16sp"
         app:layout_constraintBottom_toTopOf="@id/et_key"
         app:layout_constraintLeft_toLeftOf="@id/tv_bht_state"
         app:layout_constraintTop_toBottomOf="@id/tv_bht_state" />
 
     <Switch
-        android:id="@+id/sw_advertise"
+        android:id="@+id/sw_enable"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:showText="false"
         app:layout_constraintRight_toRightOf="@id/sw_bht_state"
-        app:layout_constraintTop_toTopOf="@id/tv_advertise" />
+        app:layout_constraintTop_toTopOf="@id/tv_enable" />
 
     <EditText
         android:id="@+id/et_key"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:drawableLeft="@drawable/ac_key"
+        android:drawableStart="@drawable/ac_key"
         android:drawableTint="?attr/actionMenuTextColor"
         android:drawablePadding="12dp"
         android:ems="10"
-        android:hint="key"
-        android:imeOptions="actionNone"
+        android:importantForAutofill="no"
+        android:hint="@string/edittext_hint"
+        android:imeOptions="actionDone"
         android:inputType="textNoSuggestions"
         app:layout_constraintBottom_toBottomOf="@id/guideline_bottom"
-        app:layout_constraintLeft_toLeftOf="@id/tv_advertise"
-        app:layout_constraintRight_toLeftOf="@id/ib_done"
-        app:layout_constraintTop_toBottomOf="@id/tv_advertise" />
+        app:layout_constraintLeft_toLeftOf="@id/tv_enable"
+        app:layout_constraintRight_toRightOf="@id/sw_enable"
+        app:layout_constraintTop_toBottomOf="@id/tv_enable" />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/guideline_top"
@@ -118,16 +119,5 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         app:layout_constraintGuide_percent="0.8" />
-
-    <ImageButton
-        android:id="@+id/ib_done"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@id/et_key"
-        app:layout_constraintLeft_toRightOf="@id/et_key"
-        app:layout_constraintRight_toRightOf="@id/sw_advertise"
-        app:layout_constraintTop_toTopOf="@id/et_key"
-        app:srcCompat="@drawable/ac_done" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

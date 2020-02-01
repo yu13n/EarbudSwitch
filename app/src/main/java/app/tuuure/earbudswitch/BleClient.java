@@ -1,6 +1,5 @@
 package app.tuuure.earbudswitch;
 
-import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
@@ -18,20 +17,18 @@ public class BleClient {
     static final String TAG = "BleClient";
 
     private Context mContext;
-    private BluetoothAdapter bluetoothAdapter;
     private BluetoothDevice bluetoothDevice;
     private UUID deviceUUID;
-    private String auth;
+    private String authKey;
     private BluetoothGattService bluetoothGattService;
     BluetoothGatt bluetoothGatt;
     ProfileManager profileManager;
 
-    BleClient(Context context, BluetoothDevice targetDevice, BluetoothAdapter adapter, ProfileManager manager) {
+    BleClient(Context context, BluetoothDevice targetDevice, ProfileManager manager) {
         mContext = context;
-        bluetoothAdapter = adapter;
         profileManager = manager;
-        auth = mContext.getSharedPreferences(mContext.getString(R.string.app_title), Context.MODE_PRIVATE).getString("key", "114514");
-        Log.d(TAG, auth);
+        authKey = mContext.getSharedPreferences(mContext.getString(R.string.app_title), Context.MODE_PRIVATE).getString("key", "114514");
+        Log.d(TAG, authKey);
         bluetoothDevice = targetDevice;
         deviceUUID = UUID.fromString(md5code32(bluetoothDevice.getAddress()));
         Log.d(TAG, deviceUUID.toString());
@@ -67,7 +64,7 @@ public class BleClient {
             UUID saltUUID = bytesToUUID(characteristic.getValue());
             Log.d(TAG, "Read" + saltUUID.toString());
 
-            byte[] authCode = uuidToBytes(UUID.fromString(md5code32(saltUUID.toString() + auth)));
+            byte[] authCode = hmacMD5(saltUUID.toString(), authKey);
             characteristic.setValue(authCode);
             Log.d(TAG, "Write" + (bluetoothGatt.writeCharacteristic(characteristic) ? "success" : "fail"));
         }
@@ -76,8 +73,8 @@ public class BleClient {
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             Log.d(TAG, "Characteristic Writed");
             super.onCharacteristicWrite(gatt, characteristic, status);
-            profileManager.a2dpConnect(bluetoothDevice);
-            profileManager.headSetConnect(bluetoothDevice);
+            profileManager.disconnect(null);
+            profileManager.connect(bluetoothDevice);
         }
     };
 

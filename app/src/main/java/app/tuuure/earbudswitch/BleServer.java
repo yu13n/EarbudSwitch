@@ -45,9 +45,8 @@ class BleServer {
         Log.d(TAG, "deviceUUID: " + deviceUUID.toString());
         saltUUID = UUID.randomUUID();
         Log.d(TAG, "saltUUID: " + saltUUID.toString());
-        String auth = mContext.getSharedPreferences(mContext.getString(R.string.app_title), Context.MODE_PRIVATE).getString("key", "114514");
-        Log.d(TAG, "auth: " + auth);
-        authCode = uuidToBytes(UUID.fromString(md5code32(saltUUID.toString() + auth)));
+        String authKey = mContext.getSharedPreferences(mContext.getString(R.string.app_title), Context.MODE_PRIVATE).getString("key", "114514");
+        authCode = hmacMD5(saltUUID.toString(), authKey);
         openGattServer();
         advertise();
     }
@@ -124,8 +123,7 @@ class BleServer {
                 //验证通过，则断开耳机
                 Log.d(TAG, "Autherized. Earbuds Disconnecting...");
 
-                profileManager.a2dpDisconnect(bluetoothDevice);
-                profileManager.headSetDisconnect(bluetoothDevice);
+                profileManager.disconnect(bluetoothDevice);
             }
             if (responseNeeded) {
                 gattServer.sendResponse(

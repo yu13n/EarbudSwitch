@@ -8,7 +8,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.util.Log;
-import android.widget.Toast;
 
 public class BluetoothMonitor extends BroadcastReceiver {
     final static String TAG = "BluetoothMonitor";
@@ -30,7 +29,6 @@ public class BluetoothMonitor extends BroadcastReceiver {
                         context.startService(service);
                     }
                     Log.d(TAG, "Bluetooth Device " + device.getName() + " Connected");
-                    Toast.makeText(context, "Bluetooth Device " + device.getName() + " Connected", Toast.LENGTH_SHORT).show();
                     break;
                 case BluetoothProfile.STATE_DISCONNECTED:
                     Intent stopIntent = new Intent();
@@ -38,7 +36,6 @@ public class BluetoothMonitor extends BroadcastReceiver {
                     context.sendBroadcast(stopIntent);
 
                     Log.d(TAG, "Bluetooth Device " + device.getName() + " Disconnected");
-                    Toast.makeText(context, "Bluetooth Device " + device.getName() + " Disconnected", Toast.LENGTH_SHORT).show();
                     break;
                 case BluetoothProfile.STATE_CONNECTING:
                     Log.d(TAG, "Bluetooth Device " + device.getName() + " Connecting");

@@ -36,6 +36,8 @@ public class EarbudService extends Service {
     private BleServer server;
     private BluetoothDevice bluetoothDevice;
     ProfileManager profileManager;
+    private NotificationCompat.Builder notificationBuilder;
+    private int notificationID;
 
     // 监听蓝牙关闭与自定义广播，用于关闭service
     private BroadcastReceiver receiver = new BroadcastReceiver() {
@@ -83,15 +85,15 @@ public class EarbudService extends Service {
         super.onCreate();
         //拉起通知
         registerNotificationChannel();
-        int notifyId = (int) System.currentTimeMillis();
+        notificationID = (int) System.currentTimeMillis();
         PendingIntent pendIntent = PendingIntent.getBroadcast(this, 0, new Intent(CHANNEL_ID), PendingIntent.FLAG_CANCEL_CURRENT);
-        NotificationCompat.Action.Builder actionBuilder = new NotificationCompat.Action.Builder(R.drawable.ic_launcher_background, "Stop", pendIntent);
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID);
-        builder.setSmallIcon(R.mipmap.ic_launcher)
+        NotificationCompat.Action.Builder actionBuilder = new NotificationCompat.Action.Builder(R.drawable.ac_done, "Stop", pendIntent);
+        notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID);
+        notificationBuilder.setSmallIcon(R.drawable.ni_advertise)
+                .setColor(getColor(R.color.color_theme))
                 .setContentTitle(getResources().getString(R.string.app_name))
-                .setContentText("Foreground service running")
                 .addAction(actionBuilder.build());
-        startForeground(notifyId, builder.build());
+        startForeground(notificationID, notificationBuilder.build());
         Log.d(TAG, "Foreground service running");
 
         mContext = this;
@@ -106,7 +108,7 @@ public class EarbudService extends Service {
 
         initBluetooth();
 
-        profileManager = new ProfileManager(this, bluetoothAdapter, proxyListener);
+        profileManager = new ProfileManager(mContext, bluetoothAdapter, proxyListener);
     }
 
     private BluetoothProfile.ServiceListener proxyListener = new BluetoothProfile.ServiceListener() {
@@ -165,6 +167,10 @@ public class EarbudService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         bluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+        notificationBuilder.setContentText(bluetoothDevice.getName() + " Advertising");
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        notificationManager.notify(notificationID, notificationBuilder.build());
+        
         return START_REDELIVER_INTENT;
     }
 

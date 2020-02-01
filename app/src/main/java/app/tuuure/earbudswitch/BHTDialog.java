@@ -12,8 +12,11 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
@@ -46,12 +49,34 @@ public class BHTDialog extends AppCompatActivity {
     private Context mContext;
     private BluetoothManager bluetoothManager;
     private BluetoothAdapter bluetoothAdapter;
-    private String auth;
     private BluetoothLeScanner bluetoothLeScanner;
     ProfileManager profileManager;
     HashMap<String, String> boundeDevices = new HashMap<>(10);
     BleClient client;
     Toolbar toolbar;
+
+    private BroadcastReceiver receiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (action == null) {
+                Log.e(TAG, "Receiver action null");
+                return;
+            }
+            if (BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED.equals(action)) {
+                int state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1);
+                switch (state) {
+                    case BluetoothProfile.STATE_CONNECTED:
+                        finish();
+                        break;
+                    case BluetoothProfile.STATE_DISCONNECTED:
+                        rvAdapter.devicesClear();
+                        scanBle();
+                        break;
+                }
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,7 +102,7 @@ public class BHTDialog extends AppCompatActivity {
                 RecycleItem item = (RecycleItem) rvAdapter.devices.toArray()[position];
                 Log.d(TAG, item.budsName + item.serverAddress);
 
-                client = new BleClient(mContext, bluetoothAdapter.getRemoteDevice(item.budsAddress), bluetoothAdapter, profileManager);
+                client = new BleClient(mContext, bluetoothAdapter.getRemoteDevice(item.budsAddress), profileManager);
                 client.bluetoothGatt = bluetoothAdapter.getRemoteDevice(item.serverAddress)
                         .connectGatt(mContext, false, client.bluetoothGattCallback);
             }
@@ -85,14 +110,16 @@ public class BHTDialog extends AppCompatActivity {
         rvDialog.setAdapter(rvAdapter);
 
         bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-        if (bluetoothManager == null) {
-            Toast.makeText(this, "设备不支持BLE", Toast.LENGTH_SHORT).show();
+        if (bluetoothManager == null || !getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+            Toast.makeText(this, getText(R.string.unsupport_ble), Toast.LENGTH_SHORT).show();
             finish();
         }
         bluetoothAdapter = bluetoothManager.getAdapter();
         if (!bluetoothAdapter.isEnabled()) {
             bluetoothAdapter.enable();
+            Toast.makeText(this, getText(R.string.toast_enable_bluetooth), Toast.LENGTH_SHORT).show();
         }
+
         profileManager = new ProfileManager(this, bluetoothAdapter, a2dpListener);
 
         for (BluetoothDevice device : bluetoothAdapter.getBondedDevices()) {
@@ -219,12 +246,19 @@ public class BHTDialog extends AppCompatActivity {
     @Override
     protected void onPause() {
         bluetoothLeScanner.stopScan(scanCallback);
+        unregisterReceiver(receiver);
+        Log.d(TAG, "Receiver unregistered");
         super.onPause();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        //注册监听蓝牙状态的receiver
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED);
+        registerReceiver(receiver, intentFilter);
+        Log.d(TAG, "Receiver registered");
         rvAdapter.devicesClear();
         scanBle();
     }

@@ -1,6 +1,12 @@
 <resources>
     <string name="app_name">EBS</string>
     <string name="app_title">Earbudswitch</string>
+    <string name="welcome_text">Welcome</string>
+    <string name="location_permission">Location Permission</string>
+    <string name="bluetooth_state">Bluetooth State</string>
+    <string name="enable_text">Enable</string>
+    <string name="edittext_hint">Key</string>
     <string name="unsupport_ble">BLE is supported on the device</string>
-    <string name="request_permission">ACCESS_FINE_LOCATION permission is needed for BLE scans</string>
+    <string name="request_permission">ACCESS_FINE_LOCATION permission is needed for BLE scan</string>
+    <string name="toast_enable_bluetooth">Bluetooth Enabled</string>
 </resources>

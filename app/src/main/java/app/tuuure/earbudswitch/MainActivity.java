@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
 
+    private static final String SHORTCUT_ID = "bhtdialog";
     private static final int REQUEST_PERMISSION_CODE = 14;
     private static final int REQUEST_BLUETOOTH_CODE = 15;
 
@@ -61,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothAdapter bluetoothAdapter;
     private Boolean isPermissionGranted = false;
     private Boolean isBluetoothOn = false;
+    private ComponentName monitor;
 
     private BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
@@ -83,11 +85,10 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         sp = getSharedPreferences(getString(R.string.app_title), MODE_PRIVATE);
-        final ComponentName monitor = new ComponentName(getPackageName(), BluetoothMonitor.class.getName());
 
         swLocation = findViewById(R.id.sw_location);
         swBluetooth = findViewById(R.id.sw_bht_state);
-        swAdvertise = findViewById(R.id.sw_advertise);
+        swAdvertise = findViewById(R.id.sw_enable);
         etKey = findViewById(R.id.et_key);
         ConstraintLayout mainLayout = findViewById(R.id.main_layout);
 
@@ -95,53 +96,34 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         String key = sp.getString("key", "");
-        if (key.length() == 0) {
-            Random r = new Random();
-            //key = String.valueOf(r.nextInt(100000) + 900000);
-            key = String.valueOf(900365);
-            SharedPreferences.Editor editor = sp.edit();
-            editor.putString("key", key);
-            editor.apply();
-        }
-        etKey.setText(key);
-        etKey.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                Log.d(TAG, "in");
-                if (actionId == EditorInfo.IME_ACTION_DONE) {
-                    Log.d(TAG, "Action Done");
-                    return false;
-                }
-                if (KeyEvent.KEYCODE_ENTER == event.getKeyCode() || KeyEvent.KEYCODE_NUMPAD_ENTER == event.getKeyCode()) {
-                    Log.d(TAG, "Enter up");
-                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                    imm.hideSoftInputFromWindow(getWindow().getDecorView().getWindowToken(), 0);
-                    return true;
-                }
+        saveKey(key);
 
-                return false;
-            }
-        });
+        setEditTextListener();
 
+        //Setup Transition Animation
+        LayoutTransition layoutTransition = mainLayout.getLayoutTransition();
+        layoutTransition.enableTransitionType(LayoutTransition.CHANGING);
         mainLayout.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
             public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
                 if (oldBottom != 0 && bottom != 0 && bottom < oldBottom) {
-                    findViewById(R.id.ib_done).setVisibility(View.VISIBLE);
                     etKey.postDelayed(new Runnable() {
                         @Override
                         public void run() {
                             etKey.requestFocus();
                         }
                     }, 200);
-                } else {
-                    findViewById(R.id.ib_done).setVisibility(View.GONE);
                 }
             }
         });
 
-        LayoutTransition layoutTransition = mainLayout.getLayoutTransition();
-        layoutTransition.enableTransitionType(LayoutTransition.CHANGING);
+        setSwitchOnCheckedChangeListener();
+
+        monitor = new ComponentName(getPackageName(), BluetoothMonitor.class.getName());
+
+        swLocation.setChecked(isPermissionGranted);
+        swBluetooth.setChecked(isBluetoothOn);
+        swAdvertise.setChecked(getPackageManager().getComponentEnabledSetting(monitor) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED);
 
         isPermissionGranted = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
         BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
@@ -151,9 +133,60 @@ public class MainActivity extends AppCompatActivity {
                 isBluetoothOn = true;
             }
         } else {
+            Toast.makeText(this, getText(R.string.unsupport_ble), Toast.LENGTH_SHORT).show();
             finish();
         }
+    }
 
+    private void setEditTextListener() {
+        etKey.setOnKeyListener(new View.OnKeyListener() {
+            @Override
+            public boolean onKey(View v, int keyCode, KeyEvent event) {
+                if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                    switch (event.getKeyCode()) {
+                        case KeyEvent.KEYCODE_ENTER:
+                        case KeyEvent.KEYCODE_NUMPAD_ENTER:
+                            Log.d(TAG, "Enter up");
+                            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                            imm.hideSoftInputFromWindow(getWindow().getDecorView().getWindowToken(), 0);
+                            etKey.clearFocus();
+                            etKey.setCursorVisible(false);
+                            saveKey(etKey.getText().toString());
+                            return true;
+                    }
+                }
+                return false;
+            }
+        });
+        etKey.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                Log.d(TAG, "in");
+                if (actionId == EditorInfo.IME_ACTION_DONE) {
+                    Log.d(TAG, "Action Done");
+                    saveKey(etKey.getText().toString());
+                    return false;
+                }
+                return false;
+            }
+        });
+        etKey.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View view, boolean hasFocus) {
+                if (hasFocus) {
+                    etKey.setFocusableInTouchMode(true);
+                    etKey.setFocusable(true);
+                    etKey.setCursorVisible(true);
+                } else {
+                    Log.d(TAG, "lost Focus");
+                    etKey.clearFocus();
+                    etKey.setCursorVisible(false);
+                }
+            }
+        });
+    }
+
+    private void setSwitchOnCheckedChangeListener() {
         CompoundButton.OnCheckedChangeListener swListener = new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -171,7 +204,7 @@ public class MainActivity extends AppCompatActivity {
                             startActivityForResult(intent, REQUEST_BLUETOOTH_CODE);
                         }
                         break;
-                    case R.id.sw_advertise:
+                    case R.id.sw_enable:
                         getPackageManager().setComponentEnabledSetting(
                                 monitor,
                                 isChecked ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
@@ -183,25 +216,29 @@ public class MainActivity extends AppCompatActivity {
         swLocation.setOnCheckedChangeListener(swListener);
         swBluetooth.setOnCheckedChangeListener(swListener);
         swAdvertise.setOnCheckedChangeListener(swListener);
+    }
 
-        swLocation.setChecked(isPermissionGranted);
-        swBluetooth.setChecked(isBluetoothOn);
-        swAdvertise.setChecked(getPackageManager().getComponentEnabledSetting(monitor) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
-            registerShortCut();
+    private void saveKey(String key) {
+        SharedPreferences.Editor editor = sp.edit();
+        if (key.isEmpty()) {
+            Random r = new Random();
+            key = String.valueOf(r.nextInt(900000) + 100000);
+            etKey.setText(key);
         }
+        editor.putString("key", key);
+        editor.apply();
+        etKey.setText(key);
     }
 
     @TargetApi(25)
     private void registerShortCut() {
-        ShortcutManager mShortcutManager = getSystemService(ShortcutManager.class);
+        ShortcutManager shortcutManager = getSystemService(ShortcutManager.class);
         List<ShortcutInfo> infos = new ArrayList<>();
 
         // 按下返回button跳转的activity
         Intent intent = new Intent(this, BHTDialog.class);
         intent.setAction(Intent.ACTION_VIEW);
-        ShortcutInfo info = new ShortcutInfo.Builder(this, "bhtdialog")
+        ShortcutInfo info = new ShortcutInfo.Builder(this, SHORTCUT_ID)
                 .setShortLabel("Scan")
                 .setLongLabel("Scan")
                 .setIcon(Icon.createWithResource(this, R.mipmap.ic_bluetooth))
@@ -209,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
                 .build();
         infos.add(info);
 
-        mShortcutManager.setDynamicShortcuts(infos);
+        shortcutManager.setDynamicShortcuts(infos);
     }
 
     private void setSwitchAccent(Switch v, int[] thumbColor, int[] trackColor) {
@@ -224,10 +261,6 @@ public class MainActivity extends AppCompatActivity {
         v.setThumbTintList(thumbStates);
 
         ColorStateList trackStates = new ColorStateList(
-//                new int[][]{
-//                        {android.R.attr.state_checked, android.R.attr.state_enabled},
-//                        {-android.R.attr.state_checked, android.R.attr.state_enabled}
-//                },
                 new int[][]{
                         new int[]{android.R.attr.state_checked},
                         new int[]{-android.R.attr.state_checked}
@@ -251,7 +284,7 @@ public class MainActivity extends AppCompatActivity {
             thumbOffColor = getColor(R.color.color_switch_thumb_off_night);
             trackOffColor = getColor(R.color.color_switch_track_off_night);
         } else {
-            // Night mode is not active, we're using the light theme
+            // Night mode is not active, Using the light theme
             Log.d(TAG, "Day");
             thumbOffColor = getColor(R.color.color_switch_thumb_off_day);
             trackOffColor = getColor(R.color.color_switch_track_off_day);
@@ -284,7 +317,15 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
+        saveKey(etKey.getText().toString());
         unregisterReceiver(receiver);
+        if (isPermissionGranted) {
+            ComponentName tile = new ComponentName(getPackageName(), QuickSetting.class.getName());
+            getPackageManager().setComponentEnabledSetting(tile, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+                registerShortCut();
+            }
+        }
         Log.d(TAG, "Receiver unregistered");
         super.onPause();
     }
@@ -297,7 +338,7 @@ public class MainActivity extends AppCompatActivity {
             isPermissionGranted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
             swLocation.setChecked(isPermissionGranted);
             if (!isPermissionGranted) {
-                Toast.makeText(this, "未授权定位信息权限将无法使用蓝牙", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getText(R.string.request_permission), Toast.LENGTH_SHORT).show();
             }
         }
     }

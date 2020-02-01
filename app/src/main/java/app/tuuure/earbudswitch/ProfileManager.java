@@ -22,7 +22,7 @@ public class ProfileManager {
         bluetoothAdapter = adapter;
         mContext = context;
         adapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.A2DP);
-        adapter.getProfileProxy(mContext,proxyListener,BluetoothProfile.HEADSET);
+        adapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.HEADSET);
     }
 
     void setAd2p(BluetoothA2dp bhtA2dp) {
@@ -37,7 +37,31 @@ public class ProfileManager {
         return bluetoothA2dp != null && bluetoothHeadset != null;
     }
 
-    void a2dpConnect(BluetoothDevice device) {
+    void connect(BluetoothDevice device) {
+        a2dpConnect(device);
+        headSetConnect(device);
+    }
+
+    void disconnect(BluetoothDevice device) {
+        if (device == null) {
+            List<BluetoothDevice> dl = bluetoothA2dp.getConnectedDevices();
+            if (!dl.isEmpty()) {
+                for (BluetoothDevice d : dl) {
+                    a2dpDisconnect(d);
+                }
+            }
+            dl = bluetoothHeadset.getConnectedDevices();
+            if (!dl.isEmpty()) {
+                for (BluetoothDevice d : dl) {
+                    headSetDisconnect(d);
+                }
+            }
+        }
+        a2dpDisconnect(device);
+        headSetDisconnect(device);
+    }
+
+    private void a2dpConnect(BluetoothDevice device) {
 //        setPriority(device, 100); //设置priority
         try {
             //通过反射获取BluetoothA2dp中connect方法（hide的），进行连接。
@@ -48,7 +72,7 @@ public class ProfileManager {
         }
     }
 
-    void a2dpDisconnect(BluetoothDevice device) {
+    private void a2dpDisconnect(BluetoothDevice device) {
         if (bluetoothA2dp.getConnectionState(device) != BluetoothProfile.STATE_CONNECTED) {
             return;
         }
@@ -62,17 +86,17 @@ public class ProfileManager {
         }
     }
 
-//    private void setPriority(BluetoothDevice device, int priority) {
-//        if (bluetoothA2dp == null) return;
-//        try {//通过反射获取BluetoothA2dp中setPriority方法（hide的），设置优先级
-//            Method setPriorityMethod = BluetoothA2dp.class.getDeclaredMethod("setPriority", BluetoothDevice.class, int.class);
-//            setPriorityMethod.invoke(bluetoothA2dp, device, priority);
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//    }
+    private void setPriority(BluetoothDevice device, int priority) {
+        if (bluetoothA2dp == null) return;
+        try {//通过反射获取BluetoothA2dp中setPriority方法（hide的），设置优先级
+            Method setPriorityMethod = BluetoothA2dp.class.getDeclaredMethod("setPriority", BluetoothDevice.class, int.class);
+            setPriorityMethod.invoke(bluetoothA2dp, device, priority);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
-    void headSetConnect(BluetoothDevice device) {
+    private void headSetConnect(BluetoothDevice device) {
         try {
             Method disconnectMethod = BluetoothHeadset.class.getDeclaredMethod("connect", BluetoothDevice.class);
             disconnectMethod.invoke(bluetoothHeadset, device);
@@ -81,7 +105,7 @@ public class ProfileManager {
         }
     }
 
-    void headSetDisconnect(BluetoothDevice device) {
+    private void headSetDisconnect(BluetoothDevice device) {
         if (bluetoothHeadset.getConnectionState(device) != BluetoothProfile.STATE_CONNECTED) {
             return;
         }

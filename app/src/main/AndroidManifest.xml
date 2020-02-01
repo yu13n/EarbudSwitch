@@ -45,7 +45,8 @@
 
         <service
             android:name=".QuickSetting"
-            android:icon="@drawable/ac_bluetooth"
+            android:enabled="false"
+            android:icon="@drawable/ic_headset"
             android:label="EBS"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>

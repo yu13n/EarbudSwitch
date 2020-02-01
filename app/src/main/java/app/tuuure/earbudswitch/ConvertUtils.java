@@ -1,12 +1,37 @@
 package app.tuuure.earbudswitch;
 
+import android.util.Base64;
+import android.util.Log;
+
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+
 class ConvertUtils {
+    private static final String TAG = "ConverUtils";
+
+    static byte[] hmacMD5(String content, String key) {
+        byte[] digest;
+        try {
+            SecretKeySpec sks = new SecretKeySpec(key.getBytes(), "HmacMD5");
+            Mac mac = Mac.getInstance("HmacMD5");
+            mac.init(sks);
+            digest = mac.doFinal(content.getBytes());
+        } catch (NoSuchAlgorithmException e) {
+            Log.e(TAG, "NoSuchAlgorithmException");
+            digest = null;
+        } catch (InvalidKeyException e) {
+            Log.e(TAG, "InvalidKeyException " + key);
+            digest = null;
+        }
+        return digest;
+    }
 
     static String md5code32(String content) {
         byte[] hash;

@@ -33,13 +33,10 @@ class BleServer {
     private BluetoothLeAdvertiser bluetoothLeAdvertiser;
     private BluetoothGattServer gattServer;
 
-    private ProfileManager profileManager;
-
-    BleServer(Context context, BluetoothDevice device, BluetoothAdapter adapter, ProfileManager manager) {
+    BleServer(Context context, BluetoothDevice device) {
         mContext = context;
         bluetoothDevice = device;
-        bluetoothAdapter = adapter;
-        profileManager = manager;
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
         deviceUUID = UUID.fromString(md5code32(bluetoothDevice.getAddress()));
         Log.d(TAG, "deviceUUID: " + deviceUUID.toString());
@@ -123,7 +120,7 @@ class BleServer {
                 //验证通过，则断开耳机
                 Log.d(TAG, "Autherized. Earbuds Disconnecting...");
 
-                profileManager.disconnect(bluetoothDevice);
+                ProfileManager.disconnect(mContext, bluetoothDevice);
             }
             if (responseNeeded) {
                 gattServer.sendResponse(

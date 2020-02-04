@@ -6,6 +6,10 @@
     <string name="bluetooth_state">Bluetooth State</string>
     <string name="enable_text">Enable</string>
     <string name="edittext_hint">Key</string>
+    <string name="shortcut_title">Bluetooth</string>
+    <string name="turning_on">Turning On&#8230;</string>
+    <string name="connecting_device">Connecting &#8230;</string>
+    <string name="battery_level">Battery: %1$d&#037;&#037;</string>
     <string name="unsupport_ble">BLE is supported on the device</string>
     <string name="request_permission">ACCESS_FINE_LOCATION permission is needed for BLE scan</string>
     <string name="toast_enable_bluetooth">Bluetooth Enabled</string>

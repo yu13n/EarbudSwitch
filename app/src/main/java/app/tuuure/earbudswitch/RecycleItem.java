@@ -1,5 +1,9 @@
 package app.tuuure.earbudswitch;
 
+import android.bluetooth.BluetoothDevice;
+
+import java.util.Set;
+
 class RecycleItem {
     String budsName;
     String budsAddress;
@@ -9,5 +13,11 @@ class RecycleItem {
         this.budsName = budsName;
         this.budsAddress = budsAddress;
         this.serverAddress = serverAddress;
+    }
+
+    RecycleItem(BluetoothDevice device) {
+        this.budsName = device.getName();
+        this.budsAddress = device.getAddress();
+        this.serverAddress = null;
     }
 }

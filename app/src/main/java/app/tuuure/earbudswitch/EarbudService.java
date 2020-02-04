@@ -89,7 +89,7 @@ public class EarbudService extends Service {
         PendingIntent pendIntent = PendingIntent.getBroadcast(this, 0, new Intent(CHANNEL_ID), PendingIntent.FLAG_CANCEL_CURRENT);
         NotificationCompat.Action.Builder actionBuilder = new NotificationCompat.Action.Builder(R.drawable.ac_done, "Stop", pendIntent);
         notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID);
-        notificationBuilder.setSmallIcon(R.drawable.ni_advertise)
+        notificationBuilder.setSmallIcon(R.drawable.ic_notify_advertise)
                 .setColor(getColor(R.color.color_theme))
                 .setContentTitle(getResources().getString(R.string.app_name))
                 .addAction(actionBuilder.build());
@@ -108,39 +108,10 @@ public class EarbudService extends Service {
 
         initBluetooth();
 
-        profileManager = new ProfileManager(mContext, bluetoothAdapter, proxyListener);
+        //启动广播server
+        server = new BleServer(mContext, bluetoothDevice);
     }
 
-    private BluetoothProfile.ServiceListener proxyListener = new BluetoothProfile.ServiceListener() {
-        @Override
-        public void onServiceDisconnected(int profile) {
-            switch (profile) {
-                case BluetoothProfile.A2DP:
-                    profileManager.setAd2p(null);
-                    break;
-                case BluetoothProfile.HEADSET:
-                    profileManager.setHeadset(null);
-                    break;
-            }
-        }
-
-        @Override
-        public void onServiceConnected(int profile, BluetoothProfile proxy) {
-            switch (profile) {
-                case BluetoothProfile.A2DP:
-                    profileManager.setAd2p((BluetoothA2dp) proxy);
-                    break;
-                case BluetoothProfile.HEADSET:
-                    profileManager.setHeadset((BluetoothHeadset) proxy);
-                    break;
-            }
-            if (profileManager.isProxyInited()) {
-
-                //启动广播server
-                server = new BleServer(mContext, bluetoothDevice, bluetoothAdapter, profileManager);
-            }
-        }
-    };
 
     private void initBluetooth() {
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -170,13 +141,12 @@ public class EarbudService extends Service {
         notificationBuilder.setContentText(bluetoothDevice.getName() + " Advertising");
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         notificationManager.notify(notificationID, notificationBuilder.build());
-        
+
         return START_REDELIVER_INTENT;
     }
 
     @Override
     public void onDestroy() {
-        profileManager.destroy();
 
         unregisterReceiver(receiver);
         Log.d(TAG, "Receiver unregistered");

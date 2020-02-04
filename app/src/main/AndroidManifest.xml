@@ -23,7 +23,6 @@
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
@@ -32,7 +31,11 @@
         <activity
             android:name=".BHTDialog"
             android:launchMode="singleInstance"
-            android:theme="@style/dialog_style" />
+            android:theme="@style/dialog_style">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+            </intent-filter>
+        </activity>
 
         <receiver
             android:name=".BluetoothMonitor"
@@ -46,7 +49,7 @@
         <service
             android:name=".QuickSetting"
             android:enabled="false"
-            android:icon="@drawable/ic_headset"
+            android:icon="@drawable/ic_qs_bluetooth"
             android:label="EBS"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>

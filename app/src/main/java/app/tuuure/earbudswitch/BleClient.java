@@ -22,11 +22,10 @@ public class BleClient {
     private String authKey;
     private BluetoothGattService bluetoothGattService;
     BluetoothGatt bluetoothGatt;
-    ProfileManager profileManager;
 
-    BleClient(Context context, BluetoothDevice targetDevice, ProfileManager manager) {
+
+    BleClient(Context context, BluetoothDevice targetDevice) {
         mContext = context;
-        profileManager = manager;
         authKey = mContext.getSharedPreferences(mContext.getString(R.string.app_title), Context.MODE_PRIVATE).getString("key", "114514");
         Log.d(TAG, authKey);
         bluetoothDevice = targetDevice;
@@ -73,8 +72,7 @@ public class BleClient {
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             Log.d(TAG, "Characteristic Writed");
             super.onCharacteristicWrite(gatt, characteristic, status);
-            profileManager.disconnect(null);
-            profileManager.connect(bluetoothDevice);
+            ProfileManager.connect(mContext,bluetoothDevice);
         }
     };
 

@@ -1,5 +1,6 @@
 package app.tuuure.earbudswitch;
 
+import android.bluetooth.BluetoothDevice;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
@@ -10,14 +11,15 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHolder> {
 
-    Set<RecycleItem> devices = new LinkedHashSet<>();
-    Set<String> discoveries = new HashSet<>();
+    ArrayList<RecycleItem> bondedDevices = new ArrayList<>();
+    Drawable[] drawables;
 
     private OnItemClickListener mOnItemClickListener;
 
@@ -41,9 +43,17 @@ public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHold
 
     @Override
     public void onBindViewHolder(@NonNull final ViewHolder holder, final int position) {
-        RecycleItem item = (RecycleItem) devices.toArray()[position];
+        RecycleItem item = bondedDevices.get(position);
 
         holder.tvDevice.setText(item.budsName);
+        if (drawables == null || drawables.length == 0) {
+            drawables = holder.tvDevice.getCompoundDrawablesRelative();
+        }
+        if (item.serverAddress != null && !item.serverAddress.isEmpty()) {
+            holder.tvDevice.setCompoundDrawables(drawables[0], null, drawables[2], null);
+        } else {
+            holder.tvDevice.setCompoundDrawables(drawables[0], null, null, null);
+        }
         if (mOnItemClickListener != null) {
             holder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -56,21 +66,33 @@ public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHold
     }
 
     void addDevice(RecycleItem item) {
-        if (!discoveries.contains(item.serverAddress)) {
-            discoveries.add(item.serverAddress);
-            devices.add(item);
-            notifyItemInserted(devices.size());
+        bondedDevices.add(item);
+        notifyItemInserted(bondedDevices.size());
+    }
+
+    void setConnectable(RecycleItem item) {
+        for (int i = 0; i < bondedDevices.size(); i++) {
+            RecycleItem tempItem = bondedDevices.get(i);
+            if (tempItem.budsAddress.equals(item.budsAddress)) {
+                bondedDevices.set(i, item);
+                notifyItemChanged(i);
+                break;
+            }
         }
     }
 
-    void devicesClear() {
-        devices.clear();
+    void devicesReset(Set<BluetoothDevice> devices) {
+        bondedDevices.clear();
+        for (BluetoothDevice device : devices) {
+            if (device.getName() != null && !device.getName().isEmpty())
+                bondedDevices.add(new RecycleItem(device));
+        }
         notifyDataSetChanged();
     }
 
     @Override
     public int getItemCount() {
-        return devices.size();
+        return bondedDevices.size();
     }
 
     class ViewHolder extends RecyclerView.ViewHolder {
@@ -79,9 +101,6 @@ public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHold
         ViewHolder(View itemView) {
             super(itemView);
             tvDevice = itemView.findViewById(R.id.tv_device);
-            Drawable dw = tvDevice.getCompoundDrawables()[0];
-            dw.setTint(Color.BLACK);
-            tvDevice.setCompoundDrawables(dw, null, null, null);
         }
     }
 }

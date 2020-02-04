@@ -7,118 +7,66 @@ import android.bluetooth.BluetoothHeadset;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 
+
 import java.lang.reflect.Method;
-import java.util.List;
 
-public class ProfileManager {
-    public static final String TAG = "ProfileManager";
-    private BluetoothA2dp bluetoothA2dp;
-    private BluetoothHeadset bluetoothHeadset;
-    private BluetoothAdapter bluetoothAdapter;
-    private Context mContext;
+class ProfileManager {
+    static final String TAG = "ProfileManager";
+    static final String CONNECT = "connect";
+    static final String DISCONNECT = "disconnect";
 
-    ProfileManager(Context context, BluetoothAdapter adapter, BluetoothProfile.ServiceListener proxyListener) {
-        //初始化蓝牙服务
-        bluetoothAdapter = adapter;
-        mContext = context;
-        adapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.A2DP);
-        adapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.HEADSET);
-    }
-
-    void setAd2p(BluetoothA2dp bhtA2dp) {
-        bluetoothA2dp = bhtA2dp;
-    }
-
-    void setHeadset(BluetoothHeadset bhtHeadset) {
-        bluetoothHeadset = bhtHeadset;
-    }
-
-    boolean isProxyInited() {
-        return bluetoothA2dp != null && bluetoothHeadset != null;
-    }
-
-    void connect(BluetoothDevice device) {
-        a2dpConnect(device);
-        headSetConnect(device);
-    }
-
-    void disconnect(BluetoothDevice device) {
-        if (device == null) {
-            List<BluetoothDevice> dl = bluetoothA2dp.getConnectedDevices();
-            if (!dl.isEmpty()) {
-                for (BluetoothDevice d : dl) {
-                    a2dpDisconnect(d);
-                }
+    private static void manage(Context mContext, final String action, final BluetoothDevice device) {
+        final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        BluetoothProfile.ServiceListener proxyListener = new BluetoothProfile.ServiceListener() {
+            @Override
+            public void onServiceDisconnected(int profile) {
             }
-            dl = bluetoothHeadset.getConnectedDevices();
-            if (!dl.isEmpty()) {
-                for (BluetoothDevice d : dl) {
-                    headSetDisconnect(d);
+
+            @Override
+            public void onServiceConnected(int profile, BluetoothProfile proxy) {
+                Class<?> proxyClass;
+
+                switch (profile) {
+                    case BluetoothProfile.HEADSET:
+                        proxyClass = BluetoothHeadset.class;
+                        break;
+                    case BluetoothProfile.A2DP:
+                        proxyClass = BluetoothA2dp.class;
+                        break;
+                    default:
+                        return;
                 }
+                try {
+                    //通过反射获取BluetoothA2dp中connect方法（hide的），进行连接。
+                    Method connectMethod = proxyClass.getDeclaredMethod(action, BluetoothDevice.class);
+                    if (action.equals(DISCONNECT)) {
+                        if (device == null) {
+                            for (BluetoothDevice e : proxy.getConnectedDevices()) {
+                                connectMethod.invoke(proxy, e);
+                            }
+                        } else {
+                            if (proxy.getConnectedDevices().contains(device)) {
+                                connectMethod.invoke(proxy, device);
+                            }
+                        }
+                    } else {
+                        connectMethod.invoke(proxy, device);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                bluetoothAdapter.closeProfileProxy(profile, proxy);
             }
-        }
-        a2dpDisconnect(device);
-        headSetDisconnect(device);
+        };
+        bluetoothAdapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.A2DP);
+        bluetoothAdapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.HEADSET);
     }
 
-    private void a2dpConnect(BluetoothDevice device) {
-//        setPriority(device, 100); //设置priority
-        try {
-            //通过反射获取BluetoothA2dp中connect方法（hide的），进行连接。
-            Method connectMethod = BluetoothA2dp.class.getDeclaredMethod("connect", BluetoothDevice.class);
-            connectMethod.invoke(bluetoothA2dp, device);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    static void disconnect(Context mContext, BluetoothDevice device) {
+        manage(mContext, DISCONNECT, device);
     }
 
-    private void a2dpDisconnect(BluetoothDevice device) {
-        if (bluetoothA2dp.getConnectionState(device) != BluetoothProfile.STATE_CONNECTED) {
-            return;
-        }
-//        setPriority(device, 0);
-        try {
-            //通过反射获取BluetoothA2dp中connect方法（hide的），断开连接。
-            Method disconnectMethod = BluetoothA2dp.class.getDeclaredMethod("disconnect", BluetoothDevice.class);
-            disconnectMethod.invoke(bluetoothA2dp, device);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void setPriority(BluetoothDevice device, int priority) {
-        if (bluetoothA2dp == null) return;
-        try {//通过反射获取BluetoothA2dp中setPriority方法（hide的），设置优先级
-            Method setPriorityMethod = BluetoothA2dp.class.getDeclaredMethod("setPriority", BluetoothDevice.class, int.class);
-            setPriorityMethod.invoke(bluetoothA2dp, device, priority);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void headSetConnect(BluetoothDevice device) {
-        try {
-            Method disconnectMethod = BluetoothHeadset.class.getDeclaredMethod("connect", BluetoothDevice.class);
-            disconnectMethod.invoke(bluetoothHeadset, device);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void headSetDisconnect(BluetoothDevice device) {
-        if (bluetoothHeadset.getConnectionState(device) != BluetoothProfile.STATE_CONNECTED) {
-            return;
-        }
-        try {
-            Method disconnectMethod = BluetoothHeadset.class.getDeclaredMethod("disconnect", BluetoothDevice.class);
-            disconnectMethod.invoke(bluetoothHeadset, device);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    void destroy() {
-        bluetoothAdapter.closeProfileProxy(BluetoothProfile.A2DP, bluetoothA2dp);
-        bluetoothAdapter.closeProfileProxy(BluetoothProfile.HEADSET, bluetoothHeadset);
+    static void connect(Context mContext, BluetoothDevice device) {
+        manage(mContext, CONNECT, device);
     }
 }

@@ -30,6 +30,7 @@ import android.graphics.PorterDuff;
 import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -107,7 +108,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
                 if (oldBottom != 0 && bottom != 0 && bottom < oldBottom) {
-                    etKey.postDelayed(new Runnable() {
+                    Handler handler = new Handler();
+                    handler.postDelayed(new Runnable() {
                         @Override
                         public void run() {
                             etKey.requestFocus();
@@ -239,8 +241,8 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, BHTDialog.class);
         intent.setAction(Intent.ACTION_VIEW);
         ShortcutInfo info = new ShortcutInfo.Builder(this, SHORTCUT_ID)
-                .setShortLabel("Scan")
-                .setLongLabel("Scan")
+                .setShortLabel(getString(R.string.shortcut_title))
+                .setLongLabel(getString(R.string.shortcut_title))
                 .setIcon(Icon.createWithResource(this, R.mipmap.ic_bluetooth))
                 .setIntent(intent)
                 .build();

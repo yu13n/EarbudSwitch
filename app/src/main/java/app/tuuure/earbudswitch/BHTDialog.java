@@ -4,7 +4,6 @@ import android.bluetooth.BluetoothA2dp;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothHeadset;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.BluetoothLeScanner;
@@ -22,6 +21,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.os.ParcelUuid;
 import android.provider.Settings;
+import android.util.ArraySet;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -38,6 +38,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 import static app.tuuure.earbudswitch.ConvertUtils.md5code32;
 
@@ -50,7 +51,6 @@ public class BHTDialog extends AppCompatActivity {
     private BluetoothManager bluetoothManager;
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothLeScanner bluetoothLeScanner;
-    ProfileManager profileManager;
     HashMap<String, String> boundeDevices = new HashMap<>(10);
     BleClient client;
     Toolbar toolbar;
@@ -70,7 +70,6 @@ public class BHTDialog extends AppCompatActivity {
                         finish();
                         break;
                     case BluetoothProfile.STATE_DISCONNECTED:
-                        rvAdapter.devicesClear();
                         scanBle();
                         break;
                 }
@@ -99,12 +98,16 @@ public class BHTDialog extends AppCompatActivity {
         rvAdapter.setOnItemClickListener(new DevicesAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(View view, int position) {
-                RecycleItem item = (RecycleItem) rvAdapter.devices.toArray()[position];
+                RecycleItem item = (RecycleItem) rvAdapter.bondedDevices.toArray()[position];
+                BluetoothDevice device = bluetoothAdapter.getRemoteDevice(item.budsAddress);
                 Log.d(TAG, item.budsName + item.serverAddress);
-
-                client = new BleClient(mContext, bluetoothAdapter.getRemoteDevice(item.budsAddress), profileManager);
-                client.bluetoothGatt = bluetoothAdapter.getRemoteDevice(item.serverAddress)
-                        .connectGatt(mContext, false, client.bluetoothGattCallback);
+                if (item.serverAddress == null || item.serverAddress.isEmpty()) {
+                    ProfileManager.connect(mContext, device);
+                } else {
+                    client = new BleClient(mContext, bluetoothAdapter.getRemoteDevice(item.budsAddress));
+                    client.bluetoothGatt = bluetoothAdapter.getRemoteDevice(item.serverAddress)
+                            .connectGatt(mContext, false, client.bluetoothGattCallback);
+                }
             }
         });
         rvDialog.setAdapter(rvAdapter);
@@ -119,41 +122,7 @@ public class BHTDialog extends AppCompatActivity {
             bluetoothAdapter.enable();
             Toast.makeText(this, getText(R.string.toast_enable_bluetooth), Toast.LENGTH_SHORT).show();
         }
-
-        profileManager = new ProfileManager(this, bluetoothAdapter, a2dpListener);
-
-        for (BluetoothDevice device : bluetoothAdapter.getBondedDevices()) {
-            if (BluetoothClass.Device.Major.AUDIO_VIDEO == device.getBluetoothClass().getMajorDeviceClass()) {
-                boundeDevices.put(md5code32(device.getAddress()), device.getAddress());
-            }
-        }
     }
-
-    private BluetoothProfile.ServiceListener a2dpListener = new BluetoothProfile.ServiceListener() {
-        @Override
-        public void onServiceDisconnected(int profile) {
-            switch (profile) {
-                case BluetoothProfile.A2DP:
-                    profileManager.setAd2p(null);
-                    break;
-                case BluetoothProfile.HEADSET:
-                    profileManager.setHeadset(null);
-                    break;
-            }
-        }
-
-        @Override
-        public void onServiceConnected(int profile, BluetoothProfile proxy) {
-            switch (profile) {
-                case BluetoothProfile.A2DP:
-                    profileManager.setAd2p((BluetoothA2dp) proxy);
-                    break;
-                case BluetoothProfile.HEADSET:
-                    profileManager.setHeadset((BluetoothHeadset) proxy);
-                    break;
-            }
-        }
-    };
 
     private ScanCallback scanCallback = new ScanCallback() {
         @Override
@@ -180,7 +149,7 @@ public class BHTDialog extends AppCompatActivity {
             }
             if (budsAddress != null && budsName != null) {
                 RecycleItem item = new RecycleItem(budsName, budsAddress, server.getAddress());
-                rvAdapter.addDevice(item);
+                rvAdapter.setConnectable(item);
                 Log.d(TAG, "Discovered " + budsName + " Server " + server.getAddress());
             }
 
@@ -259,13 +228,20 @@ public class BHTDialog extends AppCompatActivity {
         intentFilter.addAction(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED);
         registerReceiver(receiver, intentFilter);
         Log.d(TAG, "Receiver registered");
-        rvAdapter.devicesClear();
+
+        Set<BluetoothDevice> devices = new ArraySet<>();
+        for (BluetoothDevice device : bluetoothAdapter.getBondedDevices()) {
+            if (BluetoothClass.Device.Major.AUDIO_VIDEO == device.getBluetoothClass().getMajorDeviceClass()) {
+                devices.add(device);
+                boundeDevices.put(md5code32(device.getAddress()), device.getAddress());
+            }
+        }
+        rvAdapter.devicesReset(devices);
         scanBle();
     }
 
     @Override
     protected void onDestroy() {
-        profileManager.destroy();
         super.onDestroy();
     }
 }

@@ -13,7 +13,7 @@ import java.util.UUID;
 
 import static app.tuuure.earbudswitch.ConvertUtils.*;
 
-public class BleClient {
+class BleClient {
     static final String TAG = "BleClient";
 
     private Context mContext;
@@ -72,7 +72,8 @@ public class BleClient {
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             Log.d(TAG, "Characteristic Writed");
             super.onCharacteristicWrite(gatt, characteristic, status);
-            ProfileManager.connect(mContext,bluetoothDevice);
+            ProfileManager.disconnect(mContext, null); //Disconnect any connected device
+            ProfileManager.connect(mContext, bluetoothDevice);
         }
     };
 

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/frag_settings"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="220dp">
+
+    <TextView
+        android:id="@+id/tv_location"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+
+        android:text="@string/location_permission"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toTopOf="@id/tv_enable"
+        app:layout_constraintLeft_toLeftOf="@+id/guideline_left"
+
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_chainStyle="packed" />
+
+    <Switch
+        android:id="@+id/sw_location"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:includeFontPadding="false"
+        android:showText="false"
+        app:layout_constraintBaseline_toBaselineOf="@id/tv_location"
+        app:layout_constraintRight_toLeftOf="@id/guideline_right" />
+
+    <TextView
+        android:id="@+id/tv_enable"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="@string/ebs_enable"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toTopOf="@id/tv_analytics"
+        app:layout_constraintLeft_toLeftOf="@id/tv_location"
+        app:layout_constraintTop_toBottomOf="@id/tv_location" />
+
+    <Switch
+        android:id="@+id/sw_enable"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:includeFontPadding="false"
+        android:showText="false"
+        app:layout_constraintBaseline_toBaselineOf="@id/tv_enable"
+        app:layout_constraintRight_toLeftOf="@id/guideline_right" />
+
+    <TextView
+        android:id="@+id/tv_analytics"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:drawableEnd="@drawable/ic_help"
+        android:drawablePadding="5dp"
+        android:drawableTint="?attr/actionMenuTextColor"
+        android:text="@string/firebase_analytics"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toTopOf="@id/tv_crashlytics"
+        app:layout_constraintLeft_toLeftOf="@id/tv_enable"
+        app:layout_constraintTop_toBottomOf="@id/tv_enable" />
+
+    <Switch
+        android:id="@+id/sw_analytics"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:includeFontPadding="false"
+        android:showText="false"
+        app:layout_constraintBaseline_toBaselineOf="@id/tv_analytics"
+        app:layout_constraintRight_toLeftOf="@id/guideline_right" />
+
+    <TextView
+        android:id="@+id/tv_crashlytics"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:drawableEnd="@drawable/ic_help"
+        android:drawablePadding="5dp"
+        android:drawableTint="?attr/actionMenuTextColor"
+        android:text="@string/firebase_crashlytics"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toTopOf="@id/et_key"
+        app:layout_constraintLeft_toLeftOf="@id/tv_analytics"
+        app:layout_constraintTop_toBottomOf="@id/tv_analytics" />
+
+    <Switch
+        android:id="@+id/sw_crashlytics"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:includeFontPadding="false"
+        android:showText="false"
+        app:layout_constraintBaseline_toBaselineOf="@id/tv_crashlytics"
+        app:layout_constraintRight_toLeftOf="@id/guideline_right" />
+
+    <EditText
+        android:id="@+id/et_key"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:drawableStart="@drawable/ac_key"
+        android:drawablePadding="12dp"
+        android:drawableTint="?attr/actionMenuTextColor"
+        android:ems="10"
+        android:hint="@string/edittext_hint"
+        android:imeOptions="actionDone"
+        android:importantForAutofill="no"
+        android:inputType="textNoSuggestions"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="@id/tv_crashlytics"
+        app:layout_constraintRight_toLeftOf="@id/guideline_right"
+        app:layout_constraintTop_toBottomOf="@id/tv_crashlytics" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_left"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.1" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_right"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.93" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

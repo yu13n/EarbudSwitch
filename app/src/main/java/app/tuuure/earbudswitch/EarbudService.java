@@ -9,7 +9,6 @@ import android.app.Service;
 import android.bluetooth.BluetoothA2dp;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothHeadset;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.BroadcastReceiver;
@@ -24,20 +23,17 @@ import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 
+import com.google.firebase.analytics.FirebaseAnalytics;
+
 public class EarbudService extends Service {
     private static final String PACKNAME = "app.tuuure.earbudswitch";
     static final String CHANNEL_ID = PACKNAME + ".EarbudService";
     static final String CHANNEL_NAME = "Foreground Service";
     static final String TAG = "EarbudService";
+    static final int NOTIFICATION_ID = 1030;
 
     private Context mContext;
-    private BluetoothManager bluetoothManager;
-    private BluetoothAdapter bluetoothAdapter;
     private BleServer server;
-    private BluetoothDevice bluetoothDevice;
-    ProfileManager profileManager;
-    private NotificationCompat.Builder notificationBuilder;
-    private int notificationID;
 
     // 监听蓝牙关闭与自定义广播，用于关闭service
     private BroadcastReceiver receiver = new BroadcastReceiver() {
@@ -85,16 +81,9 @@ public class EarbudService extends Service {
         super.onCreate();
         //拉起通知
         registerNotificationChannel();
-        notificationID = (int) System.currentTimeMillis();
-        PendingIntent pendIntent = PendingIntent.getBroadcast(this, 0, new Intent(CHANNEL_ID), PendingIntent.FLAG_CANCEL_CURRENT);
-        NotificationCompat.Action.Builder actionBuilder = new NotificationCompat.Action.Builder(R.drawable.ac_done, "Stop", pendIntent);
-        notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID);
-        notificationBuilder.setSmallIcon(R.drawable.ic_notify_advertise)
-                .setColor(getColor(R.color.color_theme))
-                .setContentTitle(getResources().getString(R.string.app_name))
-                .addAction(actionBuilder.build());
-        startForeground(notificationID, notificationBuilder.build());
-        Log.d(TAG, "Foreground service running");
+
+        // FirebaseAnalytics
+        FirebaseAnalytics.getInstance(this).logEvent("ServiceStart", null);
 
         mContext = this;
 
@@ -108,17 +97,15 @@ public class EarbudService extends Service {
 
         initBluetooth();
 
-        //启动广播server
-        server = new BleServer(mContext, bluetoothDevice);
     }
 
 
     private void initBluetooth() {
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             //初始化蓝牙服务
-            bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+            BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
             if (bluetoothManager != null && getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-                bluetoothAdapter = bluetoothManager.getAdapter();
+                BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
                 if (!bluetoothAdapter.isEnabled()) {
                     bluetoothAdapter.enable();
                 }
@@ -128,7 +115,7 @@ public class EarbudService extends Service {
             }
         } else {
             Toast.makeText(this, getString(R.string.request_permission), Toast.LENGTH_SHORT).show();
-            Intent activityIntent = new Intent(getApplicationContext(), MainActivity.class);
+            Intent activityIntent = new Intent(getApplicationContext(), DialogActivity.class);
             activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(activityIntent);
             stopSelf();
@@ -137,10 +124,24 @@ public class EarbudService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        bluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-        notificationBuilder.setContentText(bluetoothDevice.getName() + " Advertising");
-        NotificationManager notificationManager = getSystemService(NotificationManager.class);
-        notificationManager.notify(notificationID, notificationBuilder.build());
+        BluetoothDevice bluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+
+        PendingIntent pendIntent = PendingIntent.getBroadcast(this, 0, new Intent(CHANNEL_ID), PendingIntent.FLAG_CANCEL_CURRENT);
+        NotificationCompat.Action.Builder actionBuilder = new NotificationCompat.Action.Builder(R.drawable.ac_key, "Stop", pendIntent);
+
+        String name = bluetoothDevice.getName();
+        if (name == null || name.isEmpty()) {
+            name = getString(R.string.unknown_device);
+        }
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID);
+        notificationBuilder.setSmallIcon(R.drawable.ic_notify_advertise)
+                .setColor(getColor(R.color.color_theme))
+                .setContentText(String.format(getString(R.string.notification_content), name))
+                .addAction(actionBuilder.build());
+        startForeground(NOTIFICATION_ID, notificationBuilder.build());
+
+        //启动广播server
+        server = new BleServer(mContext, bluetoothDevice);
 
         return START_REDELIVER_INTENT;
     }

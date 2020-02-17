@@ -9,12 +9,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.drawable.Icon;
+import android.os.Build;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 import android.util.Log;
 
 import java.lang.reflect.Method;
 import java.util.List;
+
+import static app.tuuure.earbudswitch.ProfileManager.getConnectionState;
 
 public class QuickSetting extends TileService {
     static final String TAG = "QuickSetting";
@@ -67,75 +70,106 @@ public class QuickSetting extends TileService {
                             break;
                     }
                     break;
+                case "android.bluetooth.device.action.BATTERY_LEVEL_CHANGED":
+                    Log.d(TAG, "reflection succeed");
+                    bluetoothAdapter.getProfileProxy(mContext, a2dpListener, BluetoothProfile.A2DP);
+                    break;
             }
-            tile.updateTile();
         }
     };
 
     private BluetoothProfile.ServiceListener a2dpListener = new BluetoothProfile.ServiceListener() {
         @Override
         public void onServiceDisconnected(int profile) {
+            Log.d(TAG, "ServiceDisconnected");
         }
 
         @Override
         public void onServiceConnected(int profile, BluetoothProfile proxy) {
+            Log.d(TAG, "ServiceConnected");
             BluetoothA2dp bluetoothA2dp = (BluetoothA2dp) proxy;
             List<BluetoothDevice> devices = bluetoothA2dp.getConnectedDevices();
             if (devices != null && !devices.isEmpty()) {
+                Log.d(TAG, "ConnectedDevice" + devices.get(0).getName());
                 connectedState(devices.get(0));
             }
             bluetoothAdapter.closeProfileProxy(BluetoothProfile.A2DP, bluetoothA2dp);
         }
     };
 
-    private void offState() {
-        tile.setLabel(getString(R.string.app_name));
-        tile.setSubtitle(null);
-        tile.setIcon(Icon.createWithResource(mContext, R.drawable.ic_qs_bluetooth));
-        tile.setState(Tile.STATE_INACTIVE);
+    private void updateTile(String label, String subtitle, Icon icon, int state) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            tile.setLabel(label);
+            tile.setSubtitle(subtitle);
+        } else {
+            if (subtitle != null) {
+                tile.setLabel(subtitle);
+            } else {
+                tile.setLabel(label);
+            }
+        }
+        tile.setIcon(icon);
+        tile.setState(state);
         tile.updateTile();
+    }
+
+    private void offState() {
+        updateTile(
+                getString(R.string.app_name),
+                null,
+                Icon.createWithResource(mContext, R.drawable.ic_qs_bluetooth),
+                Tile.STATE_INACTIVE
+        );
     }
 
     private void turningOnState() {
-        tile.setLabel(getString(R.string.app_name));
-        tile.setSubtitle(getString(R.string.turning_on));
-        tile.setIcon(Icon.createWithResource(mContext, R.drawable.ic_qs_bluetooth_connect));
-        tile.setState(Tile.STATE_ACTIVE);
-        tile.updateTile();
+        updateTile(
+                getString(R.string.app_name),
+                getString(R.string.turning_on),
+                Icon.createWithResource(mContext, R.drawable.ic_qs_bluetooth_connect),
+                Tile.STATE_ACTIVE
+        );
     }
 
     private void onState() {
-        tile.setLabel(getString(R.string.app_name));
-        tile.setSubtitle(null);
-        tile.setIcon(Icon.createWithResource(mContext, R.drawable.ic_qs_bluetooth));
-        tile.setState(Tile.STATE_ACTIVE);
-        tile.updateTile();
+        updateTile(
+                getString(R.string.app_name),
+                null,
+                Icon.createWithResource(mContext, R.drawable.ic_qs_bluetooth),
+                Tile.STATE_ACTIVE
+        );
     }
 
     private void connectingState() {
-        tile.setLabel(getString(R.string.app_name));
-        tile.setSubtitle(getString(R.string.connecting_device));
-        tile.setIcon(Icon.createWithResource(mContext, R.drawable.ic_qs_bluetooth_connect));
-        tile.setState(Tile.STATE_ACTIVE);
-        tile.updateTile();
+        updateTile(
+                getString(R.string.app_name),
+                getString(R.string.connecting_device),
+                Icon.createWithResource(mContext, R.drawable.ic_qs_bluetooth_connect),
+                Tile.STATE_ACTIVE
+        );
     }
 
     private void connectedState(final BluetoothDevice device) {
-        tile.setLabel(device.getName());
-        tile.setSubtitle(null);
-        try {
-            Method connectMethod = BluetoothDevice.class.getMethod("getBatteryLevel");
-            int batteryLevel = (int) connectMethod.invoke(device);
-            Log.d(TAG, "getBatteryLevel" + String.valueOf(batteryLevel));
-            if (batteryLevel != BATTERY_LEVEL_UNKNOWN) {
-                tile.setSubtitle(String.format(getString(R.string.battery_level), batteryLevel));
+        String subtitle = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            try {
+                Method connectMethod = BluetoothDevice.class.getMethod("getBatteryLevel");
+                int batteryLevel = (int) connectMethod.invoke(device);
+                Log.d(TAG, "getBatteryLevel" + String.valueOf(batteryLevel));
+                if (batteryLevel != BATTERY_LEVEL_UNKNOWN) {
+                    subtitle = String.format(getString(R.string.battery_level), batteryLevel);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
-        tile.setIcon(Icon.createWithResource(mContext, R.drawable.ic_qs_bluetooth_connect));
-        tile.setState(Tile.STATE_ACTIVE);
-        tile.updateTile();
+
+        updateTile(
+                device.getName(),
+                subtitle,
+                Icon.createWithResource(mContext, R.drawable.ic_qs_bluetooth_connect),
+                Tile.STATE_ACTIVE
+        );
     }
 
     @Override
@@ -157,19 +191,30 @@ public class QuickSetting extends TileService {
         //在TleAdded之后会调用一次
         mContext = this;
         tile = getQsTile();
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (bluetoothAdapter.isEnabled()) {
-            onState();
-            bluetoothAdapter.getProfileProxy(this, a2dpListener, BluetoothProfile.A2DP);
-        } else {
-            offState();
-        }
 
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
         intentFilter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
+        intentFilter.addAction("android.bluetooth.device.action.BATTERY_LEVEL_CHANGED");
         registerReceiver(receiver, intentFilter);
         Log.d(TAG, "onStartListening");
+
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (bluetoothAdapter.isEnabled()) {
+            switch (getConnectionState()) {
+                case BluetoothAdapter.STATE_CONNECTING:
+                    connectingState();
+                    break;
+                case BluetoothAdapter.STATE_CONNECTED:
+                    bluetoothAdapter.getProfileProxy(this, a2dpListener, BluetoothProfile.A2DP);
+                    break;
+                default:
+                    onState();
+                    break;
+            }
+        } else {
+            offState();
+        }
     }
 
     @Override

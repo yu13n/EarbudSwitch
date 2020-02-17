@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "919801965967",
+    "firebase_url": "https://earbudswitch.firebaseio.com",
+    "project_id": "earbudswitch",
+    "storage_bucket": "earbudswitch.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:919801965967:android:a0bde259460f29966c6ffa",
+        "android_client_info": {
+          "package_name": "app.tuuure.earbudswitch"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "919801965967-7o8tao328sqb6k7eufbof5p6rnl0t67a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.tuuure.earbudswitch",
+            "certificate_hash": "ab3e325a14bcd67de423d5701bd40d88a95756dd"
+          }
+        },
+        {
+          "client_id": "919801965967-mtha2s29q0bal54cnjlkii19bjffcr5g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBQr3_ZDmFdxcCy1s3AJITFgoIx7MpM5B0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "919801965967-mtha2s29q0bal54cnjlkii19bjffcr5g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

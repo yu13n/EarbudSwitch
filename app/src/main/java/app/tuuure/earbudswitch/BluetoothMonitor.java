@@ -28,20 +28,11 @@ public class BluetoothMonitor extends BroadcastReceiver {
                     } else {
                         context.startService(service);
                     }
-                    Log.d(TAG, "Bluetooth Device " + device.getName() + " Connected");
                     break;
                 case BluetoothProfile.STATE_DISCONNECTED:
                     Intent stopIntent = new Intent();
                     stopIntent.setAction(EarbudService.CHANNEL_ID);
                     context.sendBroadcast(stopIntent);
-
-                    Log.d(TAG, "Bluetooth Device " + device.getName() + " Disconnected");
-                    break;
-                case BluetoothProfile.STATE_CONNECTING:
-                    Log.d(TAG, "Bluetooth Device " + device.getName() + " Connecting");
-                    break;
-                case BluetoothProfile.STATE_DISCONNECTING:
-                    Log.d(TAG, "Bluetooth Device " + device.getName() + " Disconnecting");
                     break;
             }
         }

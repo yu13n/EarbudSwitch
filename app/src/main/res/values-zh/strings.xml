@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="battery_level">电池电量: %1$d&#037;&#037;</string>
+    <string name="connecting_device">正在连接&#8230;</string>
+    <string name="edittext_hint">验证密钥</string>
+    <string name="location_permission">定位权限</string>
+    <string name="turning_on">正在开启&#8230;</string>
+    <string name="request_permission">BLE扫描要求定位权限</string>
+    <string name="unsupport_ble">当前设备不支持BLE</string>
+    <string name="ebs_enable">自动广播</string>
+    <string name="notification_content">%1$s正在广播</string>
+    <string name="firebase_analytics_toast">启用后，应用将使用Firebase Analytics统计功能使用频率。</string>
+    <string name="unknown_device">未知设备</string>
+    <string name="firebase_crashlytics_toast">启用后，应用将使用Firebase Crashlytics上传崩溃记录。</string>
+</resources>

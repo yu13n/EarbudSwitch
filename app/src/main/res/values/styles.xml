@@ -1,16 +1,6 @@
 <resources>
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <!-- Customize your theme here. -->
-        <!--<item name="colorPrimary">?attr/colorPrimary</item>
-        <item name="colorPrimaryDark">?attr/colorPrimaryDark</item>
-        <item name="colorAccent">?attr/colorAccent</item>-->
-    </style>
 
     <style name="dialog_style" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <!--<item name="colorPrimary">?attr/colorPrimary</item>
-        <item name="colorPrimaryDark">?attr/colorPrimaryDark</item>
-        <item name="colorAccent">?attr/colorAccent</item>-->
         <!--是否悬浮在activity上-->
         <item name="android:windowIsFloating">true</item>
         <!--透明是否-->
@@ -22,8 +12,7 @@
         <item name="android:dialogTitle">@null</item>
         <item name="android:windowCloseOnTouchOutside">true</item>
         <item name="android:windowAnimationStyle">@android:style/Animation.Dialog</item>
-
-        <item name="android:windowMinWidthMajor">87%</item>
+        <item name="android:windowMinWidthMajor">63%</item>
         <item name="android:windowMinWidthMinor">87%</item>
     </style>
 </resources>

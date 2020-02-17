@@ -6,14 +6,15 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothHeadset;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
+import android.util.Log;
 
 
 import java.lang.reflect.Method;
 
 class ProfileManager {
     static final String TAG = "ProfileManager";
-    static final String CONNECT = "connect";
-    static final String DISCONNECT = "disconnect";
+    private static final String CONNECT = "connect";
+    private static final String DISCONNECT = "disconnect";
 
     private static void manage(Context mContext, final String action, final BluetoothDevice device) {
         final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -68,5 +69,15 @@ class ProfileManager {
 
     static void connect(Context mContext, BluetoothDevice device) {
         manage(mContext, CONNECT, device);
+    }
+
+    static int getConnectionState() {
+        try {
+            Method method = BluetoothAdapter.class.getDeclaredMethod("getConnectionState");
+            return (int) method.invoke(BluetoothAdapter.getDefaultAdapter());
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
+        return -1;
     }
 }

@@ -1,43 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cv_container"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:layout_marginTop="2dp"
+    android:layout_marginBottom="2dp"
+    android:foreground="?android:attr/selectableItemBackground"
+    android:padding="4dp"
+    app:cardBackgroundColor="@android:color/transparent"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="0dp"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent">
 
-    <androidx.cardview.widget.CardView
-        android:id="@+id/cv_container"
+    <TextView
+        android:id="@+id/tv_device"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:layout_marginBottom="2dp"
-        android:foreground="?android:attr/selectableItemBackground"
-        android:padding="4dp"
-        app:cardBackgroundColor="@android:color/transparent"
-        app:cardCornerRadius="8dp"
-        app:cardElevation="0dp"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        android:layout_gravity="center_vertical"
+        android:drawableStart="@drawable/ic_headset"
+        android:drawableTop="@drawable/animation_refresh"
+        android:drawableEnd="@drawable/ic_connectable"
+        android:drawableBottom="@drawable/ic_connected"
 
-        <TextView
-            android:id="@+id/tv_device"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:drawableStart="@drawable/ic_headset"
-            android:drawableTop="@drawable/animation_refresh"
-            android:drawableEnd="@drawable/ic_connectable"
-            android:drawableBottom="@drawable/ic_connected"
-
-            android:drawablePadding="20dp"
-            android:drawableTint="?attr/actionMenuTextColor"
-            android:gravity="center_vertical"
-            android:includeFontPadding="false"
-            android:paddingStart="6dp"
-            android:paddingTop="10dp"
-            android:paddingEnd="6dp"
-            android:paddingBottom="10dp"
-            android:text="Device"
-            android:textSize="20sp" />
-    </androidx.cardview.widget.CardView>
-</LinearLayout>
+        android:drawablePadding="20dp"
+        android:drawableTint="?attr/actionMenuTextColor"
+        android:gravity="center_vertical"
+        android:includeFontPadding="false"
+        android:paddingStart="6dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="6dp"
+        android:paddingBottom="10dp"
+        android:text="Device"
+        android:textSize="20sp" />
+</androidx.cardview.widget.CardView>

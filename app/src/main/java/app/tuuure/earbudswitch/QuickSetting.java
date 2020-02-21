@@ -222,7 +222,11 @@ public class QuickSetting extends TileService {
         // 关闭下拉通知栏的时候调用,当快速设置按钮并没有在编辑栏拖到设置栏中不会调用
         // 在onTileRemoved移除之前也会调用移除
         Log.d(TAG, "onStopListening");
-        unregisterReceiver(receiver);
+        try {
+            unregisterReceiver(receiver);
+        } catch(IllegalArgumentException e) {
+            e.printStackTrace();
+        }
         super.onStopListening();
     }
 }

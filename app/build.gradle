@@ -1,6 +1,4 @@
 apply plugin: 'com.android.application'
-apply plugin: 'com.google.gms.google-services'
-apply plugin: 'com.google.firebase.crashlytics'
 
 android {
     compileSdkVersion 29
@@ -9,8 +7,8 @@ android {
         applicationId "app.tuuure.earbudswitch"
         minSdkVersion 24
         targetSdkVersion 29
-        versionCode 5
-        versionName "1.02"
+        versionCode 6
+        versionName "1.03"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -29,11 +27,6 @@ dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.1.0'
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation "androidx.viewpager2:viewpager2:1.0.0"
-
-    // Add the Firebase SDK for Crashlytics.
-    implementation 'com.google.firebase:firebase-analytics:17.2.2'
-
-    implementation 'com.google.firebase:firebase-crashlytics:17.0.0-beta01'
 
     testImplementation 'junit:junit:4.13'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'

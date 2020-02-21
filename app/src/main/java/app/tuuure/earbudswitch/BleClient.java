@@ -1,5 +1,7 @@
 package app.tuuure.earbudswitch;
 
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
@@ -27,7 +29,6 @@ class BleClient {
     BleClient(Context context, BluetoothDevice targetDevice) {
         mContext = context;
         authKey = mContext.getSharedPreferences(mContext.getString(R.string.app_title), Context.MODE_PRIVATE).getString("key", "114514");
-        Log.d(TAG, authKey);
         bluetoothDevice = targetDevice;
         deviceUUID = UUID.fromString(md5code32(bluetoothDevice.getAddress()));
         Log.d(TAG, deviceUUID.toString());
@@ -40,8 +41,28 @@ class BleClient {
             super.onConnectionStateChange(gatt, status, newState);
             Log.d(TAG, "StateChange " + status + "_" + newState);
             if (status == BluetoothGatt.GATT_SUCCESS) {
+
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
                     bluetoothGatt.discoverServices();
+                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                    ProfileManager.connect(mContext, bluetoothDevice);
+                    for (BluetoothDevice device : BluetoothAdapter.getDefaultAdapter().getBondedDevices()) {
+                        if (BluetoothClass.Device.Major.AUDIO_VIDEO != device.getBluetoothClass().getMajorDeviceClass()
+                                || device.getName() == null || device.getName().isEmpty())
+                            continue;
+                        if (!device.getAddress().equals(bluetoothDevice.getAddress())) {
+                            int i, min = Math.min(device.getName().length(), bluetoothDevice.getName().length());
+                            for (i = 0; i < min; i++) {
+                                if (device.getName().charAt(i) != bluetoothDevice.getName().charAt(i)) {
+                                    break;
+                                }
+                            }
+                            if (Math.max(device.getName().length(), bluetoothDevice.getName().length()) <= 3 + i) {
+                                ProfileManager.connect(mContext, device);
+                            }
+                        }
+                    }
+
                 }
             }
         }
@@ -73,7 +94,6 @@ class BleClient {
             Log.d(TAG, "Characteristic Writed");
             super.onCharacteristicWrite(gatt, characteristic, status);
             ProfileManager.disconnect(mContext, null); //Disconnect any connected device
-            ProfileManager.connect(mContext, bluetoothDevice);
         }
     };
 

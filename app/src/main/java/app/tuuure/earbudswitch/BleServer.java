@@ -131,6 +131,7 @@ class BleServer {
                         null
                 );
             }
+            gattServer.cancelConnection(device);
             super.onCharacteristicWriteRequest(device, requestId, characteristic, preparedWrite, responseNeeded, offset, value);
         }
     };

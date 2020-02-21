@@ -17,8 +17,9 @@ class ProfileManager {
     private static final String DISCONNECT = "disconnect";
 
     private static void manage(Context mContext, final String action, final BluetoothDevice device) {
-        final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         BluetoothProfile.ServiceListener proxyListener = new BluetoothProfile.ServiceListener() {
+            BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
             @Override
             public void onServiceDisconnected(int profile) {
             }

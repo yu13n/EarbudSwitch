@@ -29,8 +29,6 @@ import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.firebase.analytics.FirebaseAnalytics;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,7 +43,6 @@ public class DevicesFrag extends Fragment {
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothLeScanner bluetoothLeScanner;
     private HashMap<String, String> boundeDevices = new HashMap<>(10);
-    private FirebaseAnalytics mFirebaseAnalytics;
 
     private BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
@@ -74,7 +71,12 @@ public class DevicesFrag extends Fragment {
                             mContext.setItemSwitchChecked(true);
                             rvAdapter.devicesReset(bluetoothAdapter.getBondedDevices());
                             if (mContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                                scanBle();
+                                new Thread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        scanBle();
+                                    }
+                                }).start();
                             }
                             break;
                     }
@@ -101,7 +103,6 @@ public class DevicesFrag extends Fragment {
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         mContext = (DialogActivity) context;
-        mFirebaseAnalytics = FirebaseAnalytics.getInstance(mContext);
     }
 
     @Nullable
@@ -116,7 +117,12 @@ public class DevicesFrag extends Fragment {
         rvDialog.setLayoutManager(mLinearLayoutManager);
         rvDialog.setItemAnimator(new DefaultItemAnimator());
         rvAdapter = new DevicesAdapter();
+        return view;
+    }
 
+    @Override
+    public void onStart() {
+        super.onStart();
         rvAdapter.setOnItemClickListener(new DevicesAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(View view, int position) {
@@ -125,7 +131,7 @@ public class DevicesFrag extends Fragment {
                 if (item.isConnected) {
                     Intent service = new Intent(mContext, EarbudService.class);
                     service.putExtra(BluetoothDevice.EXTRA_DEVICE, device);
-                    mFirebaseAnalytics.logEvent("ManuAdvertise", null);
+                    //TODO: ManuAdvertise
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         mContext.startForegroundService(service);
                     } else {
@@ -135,11 +141,10 @@ public class DevicesFrag extends Fragment {
                 }
                 Log.d(TAG, item.budsName + item.serverAddress);
                 if (item.serverAddress == null || item.serverAddress.isEmpty()) {
-                    ProfileManager.disconnect(mContext, null); //Disconnect any connected device
-                    mFirebaseAnalytics.logEvent("NormalConnect", null);
+                    //TODO: NormalConnect
                     ProfileManager.connect(mContext, device);
                 } else {
-                    mFirebaseAnalytics.logEvent("EBSConnect", null);
+                    //TODO: EBSConnect
                     BleClient client = new BleClient(mContext, bluetoothAdapter.getRemoteDevice(item.budsAddress));
                     client.bluetoothGatt = bluetoothAdapter.getRemoteDevice(item.serverAddress)
                             .connectGatt(mContext, false, client.bluetoothGattCallback);
@@ -153,13 +158,12 @@ public class DevicesFrag extends Fragment {
                 RecycleItem item = (RecycleItem) rvAdapter.bondedDevices.toArray()[position];
                 BluetoothDevice device = bluetoothAdapter.getRemoteDevice(item.budsAddress);
                 if (item.isConnected) {
-                    mFirebaseAnalytics.logEvent("ManuDisconnect", null);
+                    //TODO: ManuDisconnect
                     ProfileManager.disconnect(mContext, device);
                 }
             }
         });
         rvDialog.setAdapter(rvAdapter);
-        return view;
     }
 
     @Override
@@ -178,15 +182,20 @@ public class DevicesFrag extends Fragment {
         bluetoothAdapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.A2DP);
         bluetoothAdapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.HEADSET);
 
-        ArrayList<RecycleItem> devices = rvAdapter.getData();
-        if (devices != null && !devices.isEmpty()) {
-            for (RecycleItem item : devices) {
-                boundeDevices.put(md5code32(item.budsAddress), item.budsAddress);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                ArrayList<RecycleItem> devices = rvAdapter.getData();
+                if (devices != null && !devices.isEmpty()) {
+                    for (RecycleItem item : devices) {
+                        boundeDevices.put(md5code32(item.budsAddress), item.budsAddress);
+                    }
+                    if (bluetoothAdapter.isEnabled() && mContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                        scanBle();
+                    }
+                }
             }
-            if (bluetoothAdapter.isEnabled() && mContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                scanBle();
-            }
-        }
+        }).start();
     }
 
     @Override
@@ -197,8 +206,12 @@ public class DevicesFrag extends Fragment {
             bluetoothLeScanner = null;
         }
 
-        mContext.unregisterReceiver(receiver);
-        Log.d(TAG, "Receiver unregistered");
+        try {
+            mContext.unregisterReceiver(receiver);
+            Log.d(TAG, "Receiver unregistered");
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+        }
         super.onPause();
     }
 

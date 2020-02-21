@@ -9,10 +9,13 @@ import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.content.res.TypedArray;
+import android.graphics.BlendMode;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.os.Debug;
+import android.os.Environment;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
@@ -31,8 +34,6 @@ import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
-import com.google.firebase.analytics.FirebaseAnalytics;
-
 public class DialogActivity extends AppCompatActivity {
     final static String TAG = "EBSDialog";
 
@@ -44,7 +45,6 @@ public class DialogActivity extends AppCompatActivity {
     boolean nightMode;
     private Switch itemSwitch;
     private BluetoothAdapter bluetoothAdapter;
-    FirebaseAnalytics mFirebaseAnalytics;
 
     void setItemSwitchChecked(boolean b) {
         itemSwitch.setChecked(b);
@@ -52,14 +52,24 @@ public class DialogActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dialog);
+        Toolbar toolbar = findViewById(R.id.tb_dialog);
+        setSupportActionBar(toolbar);
+        getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
-        // Obtain the FirebaseAnalytics instance.
-        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
-        mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.APP_OPEN, null);
+        viewPager = findViewById(R.id.viewpage);
+        PaperAdapter paperAdapter = new PaperAdapter(this);
+        viewPager.setAdapter(paperAdapter);
+        viewPager.setPageTransformer(new DepthPageTransformer());
 
+        //TODO: APP_OPEN
+
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
         BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         if (bluetoothManager == null || !getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             Toast.makeText(this, getText(R.string.unsupport_ble), Toast.LENGTH_SHORT).show();
@@ -67,16 +77,6 @@ public class DialogActivity extends AppCompatActivity {
         }
         bluetoothAdapter = bluetoothManager.getAdapter();
 
-        Window window = getWindow();
-        window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-
-        Toolbar toolbar = findViewById(R.id.tb_dialog);
-        setSupportActionBar(toolbar);
-
-        viewPager = findViewById(R.id.viewpage);
-        PaperAdapter paperAdapter = new PaperAdapter(this);
-        viewPager.setAdapter(paperAdapter);
-        viewPager.setPageTransformer(new DepthPageTransformer());
     }
 
     @Override
@@ -92,14 +92,16 @@ public class DialogActivity extends AppCompatActivity {
         backgroundColor = array.getColor(1, Color.DKGRAY);
         array.recycle();
 
-        bluetoothAdapter.enable();
+        if (!bluetoothAdapter.isEnabled()) {
+            bluetoothAdapter.enable();
+        }
 
-        invalidateOptionsMenu();
 
         findViewById(R.id.dialog_conlayout).setBackgroundColor(backgroundColor);
 
         isPermissionGranted = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
         if (!isPermissionGranted) {
+            Toast.makeText(this, getString(R.string.request_permission), Toast.LENGTH_SHORT).show();
             viewPager.setCurrentItem(1);
         }
     }
@@ -135,24 +137,24 @@ public class DialogActivity extends AppCompatActivity {
                 if (positionOffset == 0) {
                     if (position == 0) {
                         menuSwitch.setVisible(true);
-                        menuSwitch.getActionView().setAlpha(1);
+                        //menuSwitch.getActionView().setAlpha(1);
                         menuSettings.setVisible(false);
-                        menuSettings.getActionView().setAlpha(0);
+                        //menuSettings.getActionView().setAlpha(0);
                     } else {
                         menuSwitch.setVisible(false);
-                        menuSwitch.getActionView().setAlpha(0);
+                        //menuSwitch.getActionView().setAlpha(0);
                         menuSettings.setVisible(true);
-                        menuSettings.getActionView().setAlpha(1);
+                        //menuSettings.getActionView().setAlpha(1);
                     }
                 } else if (positionOffset <= 0.5) {
-                    float alpha = (float) (Math.cos((2 - 2 * positionOffset) * Math.PI) / 2 + 0.5);
+                    float alpha = (float) (Math.cos((2 - 2 * positionOffset) * 3.14) / 2 + 0.5);
                     menuSwitch.getActionView().setAlpha(alpha);
                     menuSwitch.setVisible(true);
                     menuSettings.setVisible(false);
                 } else {
-                    menuSwitch.setVisible(false);
-                    float alpha = (float) (Math.cos(2 * positionOffset * Math.PI) / 2 + 0.5);
+                    float alpha = (float) (Math.cos(2 * positionOffset * 3.14) / 2 + 0.5);
                     menuSettings.getActionView().setAlpha(alpha);
+                    menuSwitch.setVisible(false);
                     menuSettings.setVisible(true);
                 }
             }
@@ -164,8 +166,8 @@ public class DialogActivity extends AppCompatActivity {
     public boolean onPrepareOptionsMenu(Menu menu) {
         itemSwitch.setChecked(bluetoothAdapter.isEnabled());
         setSwitchAccent(new Switch[]{itemSwitch});
-        final MenuItem menuSwitch = menu.findItem(R.id.app_bar_switch);
-        final MenuItem menuSettings = menu.findItem(R.id.app_bar_button);
+        MenuItem menuSwitch = menu.findItem(R.id.app_bar_switch);
+        MenuItem menuSettings = menu.findItem(R.id.app_bar_button);
         menuSwitch.setVisible(viewPager.getCurrentItem() == 0);
         menuSettings.setVisible(viewPager.getCurrentItem() == 1);
         return super.onPrepareOptionsMenu(menu);
@@ -220,8 +222,8 @@ public class DialogActivity extends AppCompatActivity {
     }
 
     private class PaperAdapter extends FragmentStateAdapter {
-        PaperAdapter(FragmentActivity fa) {
-            super(fa);
+        PaperAdapter(FragmentActivity fragmentActivity) {
+            super(fragmentActivity);
         }
 
         @NonNull

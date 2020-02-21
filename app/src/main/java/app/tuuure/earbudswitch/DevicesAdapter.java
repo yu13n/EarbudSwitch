@@ -160,7 +160,7 @@ public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHold
 
     void devicesReset(Set<BluetoothDevice> devices) {
         bondedDevices.clear();
-        if (devices != null)
+        if (devices != null && !devices.isEmpty())
             for (BluetoothDevice device : devices) {
                 if (BluetoothClass.Device.Major.AUDIO_VIDEO == device.getBluetoothClass().getMajorDeviceClass()
                         && device.getName() != null && !device.getName().isEmpty())

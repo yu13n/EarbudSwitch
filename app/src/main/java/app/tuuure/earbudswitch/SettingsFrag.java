@@ -23,11 +23,8 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.constraintlayout.widget.Group;
 import androidx.fragment.app.Fragment;
 
-import com.google.firebase.analytics.FirebaseAnalytics;
-import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import java.util.Random;
 
@@ -68,6 +65,7 @@ public class SettingsFrag extends Fragment {
 
         etKey = view.findViewById(R.id.et_key);
 
+        //TODO: change Toast Message
         view.findViewById(R.id.tv_analytics).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -110,8 +108,9 @@ public class SettingsFrag extends Fragment {
         swAdvertise.setChecked(mContext.getPackageManager().getComponentEnabledSetting(monitor) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED);
         try {
             ApplicationInfo appInfo = mContext.getPackageManager().getApplicationInfo(mContext.getPackageName(), PackageManager.GET_META_DATA);
-            swAnalytics.setChecked(appInfo.metaData.getBoolean("firebase_analytics_collection_enabled"));
-            swCrashlytics.setChecked(appInfo.metaData.getBoolean("firebase_crashlytics_collection_enabled"));
+            //TODO: Analytics and Crashlytics setChecked
+//            swAnalytics.setChecked(appInfo.metaData.getBoolean("firebase_analytics_collection_enabled"));
+//            swCrashlytics.setChecked(appInfo.metaData.getBoolean("firebase_crashlytics_collection_enabled"));
         } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace();
         }
@@ -144,14 +143,10 @@ public class SettingsFrag extends Fragment {
                                 PackageManager.DONT_KILL_APP);
                         break;
                     case R.id.sw_analytics:
-                        FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(mContext);
-                        if (!isChecked) {
-                            mFirebaseAnalytics.logEvent("CU", null);
-                        }
-                        mFirebaseAnalytics.setAnalyticsCollectionEnabled(isChecked);
+                        //TODO: analytics
                         break;
                     case R.id.sw_crashlytics:
-                        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(isChecked);
+                        //TODO: crashlytics
                         break;
                 }
             }

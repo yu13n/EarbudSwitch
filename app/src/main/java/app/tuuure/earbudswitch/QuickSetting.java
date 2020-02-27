@@ -12,7 +12,6 @@ import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
-import android.util.Log;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -32,7 +31,6 @@ public class QuickSetting extends TileService {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if (action == null) {
-                Log.e(TAG, "Receiver action null");
                 return;
             }
             int state;
@@ -71,7 +69,6 @@ public class QuickSetting extends TileService {
                     }
                     break;
                 case "android.bluetooth.device.action.BATTERY_LEVEL_CHANGED":
-                    Log.d(TAG, "reflection succeed");
                     bluetoothAdapter.getProfileProxy(mContext, a2dpListener, BluetoothProfile.A2DP);
                     break;
             }
@@ -81,16 +78,14 @@ public class QuickSetting extends TileService {
     private BluetoothProfile.ServiceListener a2dpListener = new BluetoothProfile.ServiceListener() {
         @Override
         public void onServiceDisconnected(int profile) {
-            Log.d(TAG, "ServiceDisconnected");
+
         }
 
         @Override
         public void onServiceConnected(int profile, BluetoothProfile proxy) {
-            Log.d(TAG, "ServiceConnected");
             BluetoothA2dp bluetoothA2dp = (BluetoothA2dp) proxy;
             List<BluetoothDevice> devices = bluetoothA2dp.getConnectedDevices();
             if (devices != null && !devices.isEmpty()) {
-                Log.d(TAG, "ConnectedDevice" + devices.get(0).getName());
                 connectedState(devices.get(0));
             }
             bluetoothAdapter.closeProfileProxy(BluetoothProfile.A2DP, bluetoothA2dp);
@@ -155,7 +150,6 @@ public class QuickSetting extends TileService {
             try {
                 Method connectMethod = BluetoothDevice.class.getMethod("getBatteryLevel");
                 int batteryLevel = (int) connectMethod.invoke(device);
-                Log.d(TAG, "getBatteryLevel" + String.valueOf(batteryLevel));
                 if (batteryLevel != BATTERY_LEVEL_UNKNOWN) {
                     subtitle = String.format(getString(R.string.battery_level), batteryLevel);
                 }
@@ -175,13 +169,11 @@ public class QuickSetting extends TileService {
     @Override
     public void onClick() {
         super.onClick();
-        // 点击的时候
         if (bluetoothAdapter.isEnabled()) {
             bluetoothAdapter.disable();
         } else {
             bluetoothAdapter.enable();
         }
-        Log.d(TAG, "onClick");
     }
 
     @Override
@@ -197,7 +189,6 @@ public class QuickSetting extends TileService {
         intentFilter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
         intentFilter.addAction("android.bluetooth.device.action.BATTERY_LEVEL_CHANGED");
         registerReceiver(receiver, intentFilter);
-        Log.d(TAG, "onStartListening");
 
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (bluetoothAdapter.isEnabled()) {
@@ -219,12 +210,9 @@ public class QuickSetting extends TileService {
 
     @Override
     public void onStopListening() {
-        // 关闭下拉通知栏的时候调用,当快速设置按钮并没有在编辑栏拖到设置栏中不会调用
-        // 在onTileRemoved移除之前也会调用移除
-        Log.d(TAG, "onStopListening");
         try {
             unregisterReceiver(receiver);
-        } catch(IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             e.printStackTrace();
         }
         super.onStopListening();

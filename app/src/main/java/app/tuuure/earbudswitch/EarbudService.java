@@ -22,6 +22,8 @@ import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 
+import com.microsoft.appcenter.analytics.Analytics;
+
 public class EarbudService extends Service {
     private static final String PACKNAME = "app.tuuure.earbudswitch";
     static final String CHANNEL_ID = PACKNAME + ".EarbudService";
@@ -29,8 +31,9 @@ public class EarbudService extends Service {
     static final String TAG = "EarbudService";
     static final int NOTIFICATION_ID = 30;
 
-    private Context mContext;
     private BleServer server;
+    private NotificationCompat.Builder notificationBuilder;
+    private NotificationManager notificationManager;
 
     // 监听蓝牙关闭与自定义广播，用于关闭service
     private BroadcastReceiver receiver = new BroadcastReceiver() {
@@ -44,23 +47,24 @@ public class EarbudService extends Service {
             switch (action) {
                 case BluetoothAdapter.ACTION_STATE_CHANGED:
                     if (state == -1) {
+                        // Bluetooth Turning off
                         state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1);
                         if (state != BluetoothAdapter.STATE_OFF) {
                             break;
                         }
-                        Log.d(TAG, "Bluetooth Turning off");
                     }
                 case BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED:
                     if (state == -1) {
+                        // Bluetooth Device disconnect
                         state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1);
                         if (state != BluetoothProfile.STATE_DISCONNECTED) {
                             break;
+                        } else {
+                            server.disconnectNotify();
                         }
-                        Log.d(TAG, "Bluetooth Device disconnect");
                     }
                 case CHANNEL_ID:
-                    Log.d(TAG, "Service stop self");
-
+                    // Service stop self
                     server.stopAdvertise();
                     server.stopGattServer();
                     stopSelf();
@@ -77,31 +81,23 @@ public class EarbudService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.d(TAG, "Service start");
+
+        notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID);
+        notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
         //注册通知渠道
         registerNotificationChannel();
 
-        //TODO: ServiceStart
-
-        mContext = this;
-
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        BluetoothDevice bluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+        Analytics.trackEvent("ServiceStart");
 
         PendingIntent pendIntent = PendingIntent.getBroadcast(this, 0, new Intent(CHANNEL_ID), PendingIntent.FLAG_CANCEL_CURRENT);
         NotificationCompat.Action.Builder actionBuilder = new NotificationCompat.Action.Builder(R.drawable.ac_key, "Stop", pendIntent);
 
-        String name = bluetoothDevice.getName();
-        if (name == null || name.isEmpty()) {
-            name = getString(R.string.unknown_device);
-        }
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID);
+        notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID);
         notificationBuilder.setSmallIcon(R.drawable.ic_notify_advertise)
                 .setColor(getColor(R.color.color_theme))
-                .setContentText(String.format(getString(R.string.notification_content), name))
+                .setContentText(String.format(getString(R.string.notification_content), getString(R.string.unknown_device)))
                 .addAction(actionBuilder.build());
         startForeground(NOTIFICATION_ID, notificationBuilder.build());
 
@@ -111,13 +107,26 @@ public class EarbudService extends Service {
         intentFilter.addAction(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED);
         intentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
         registerReceiver(receiver, intentFilter);
-        Log.d(TAG, "Receiver registered");
 
         //初始化蓝牙
         initBluetooth();
 
-        //启动广播server
-        server = new BleServer(mContext, bluetoothDevice);
+        //初始化广播server
+        server = new BleServer(this);
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        BluetoothDevice bluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+
+        String name = bluetoothDevice.getName();
+        if (name == null || name.isEmpty()) {
+            name = getString(R.string.unknown_device);
+        }
+        notificationBuilder.setContentText(String.format(getString(R.string.notification_content), name));
+        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+
+        server.addDevice(bluetoothDevice);
 
         return START_REDELIVER_INTENT;
     }
@@ -141,30 +150,23 @@ public class EarbudService extends Service {
 
         try {
             unregisterReceiver(receiver);
-            Log.d(TAG, "Receiver unregistered");
-        } catch(IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             e.printStackTrace();
         }
 
-
         stopForeground(true);
-        Log.d(TAG, "Foreground service terminated");
 
         super.onDestroy();
     }
 
     private void registerNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            if (notificationManager == null) {
-                return;
-            }
             NotificationChannel notificationChannel = notificationManager.getNotificationChannel(CHANNEL_ID);
             if (notificationChannel == null) {
                 NotificationChannel channel = new NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_LOW);
                 channel.enableLights(false);
                 channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-                channel.setShowBadge(true);
+                channel.setShowBadge(false);
                 notificationManager.createNotificationChannel(channel);
             }
         }

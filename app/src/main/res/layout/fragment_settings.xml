@@ -13,7 +13,7 @@
 
         android:text="@string/location_permission"
         android:textSize="16sp"
-        app:layout_constraintBottom_toTopOf="@id/tv_enable"
+        app:layout_constraintBottom_toTopOf="@id/tv_aggressive"
         app:layout_constraintLeft_toLeftOf="@+id/guideline_left"
 
         app:layout_constraintTop_toTopOf="parent"
@@ -29,23 +29,26 @@
         app:layout_constraintRight_toLeftOf="@id/guideline_right" />
 
     <TextView
-        android:id="@+id/tv_enable"
+        android:id="@+id/tv_aggressive"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
-        android:text="@string/ebs_enable"
+        android:drawableEnd="@drawable/ic_help"
+        android:drawablePadding="5dp"
+        android:drawableTint="?attr/actionMenuTextColor"
+        android:text="@string/aggressive_mode"
         android:textSize="16sp"
         app:layout_constraintBottom_toTopOf="@id/tv_analytics"
         app:layout_constraintLeft_toLeftOf="@id/tv_location"
         app:layout_constraintTop_toBottomOf="@id/tv_location" />
 
     <Switch
-        android:id="@+id/sw_enable"
+        android:id="@+id/sw_aggressive"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:includeFontPadding="false"
         android:showText="false"
-        app:layout_constraintBaseline_toBaselineOf="@id/tv_enable"
+        app:layout_constraintBaseline_toBaselineOf="@id/tv_aggressive"
         app:layout_constraintRight_toLeftOf="@id/guideline_right" />
 
     <TextView
@@ -59,8 +62,8 @@
         android:text="@string/firebase_analytics"
         android:textSize="16sp"
         app:layout_constraintBottom_toTopOf="@id/tv_crashlytics"
-        app:layout_constraintLeft_toLeftOf="@id/tv_enable"
-        app:layout_constraintTop_toBottomOf="@id/tv_enable" />
+        app:layout_constraintLeft_toLeftOf="@id/tv_aggressive"
+        app:layout_constraintTop_toBottomOf="@id/tv_aggressive" />
 
     <Switch
         android:id="@+id/sw_analytics"

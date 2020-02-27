@@ -4,7 +4,6 @@ import android.Manifest;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -26,25 +25,27 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 
+import com.microsoft.appcenter.analytics.Analytics;
+import com.microsoft.appcenter.crashes.Crashes;
+import com.microsoft.appcenter.utils.async.AppCenterConsumer;
+
 import java.util.Random;
 
 import static android.content.Context.MODE_PRIVATE;
 
 public class SettingsFrag extends Fragment {
-    final static String TAG = "FragSettings";
     private static final int REQUEST_PERMISSION_CODE = 5;
 
     private DialogActivity mContext;
     private Switch swLocation;
 
-    private Switch swAdvertise;
+    private Switch swAggressive;
     private Switch swAnalytics;
     private Switch swCrashlytics;
     private EditText etKey;
     private SharedPreferences sp;
 
     private Boolean isPermissionGranted;
-    private ComponentName monitor;
 
 
     @Override
@@ -59,13 +60,18 @@ public class SettingsFrag extends Fragment {
         View view = inflater.inflate(R.layout.fragment_settings, container, false);
 
         swLocation = view.findViewById(R.id.sw_location);
-        swAdvertise = view.findViewById(R.id.sw_enable);
+        swAggressive = view.findViewById(R.id.sw_aggressive);
         swAnalytics = view.findViewById(R.id.sw_analytics);
         swCrashlytics = view.findViewById(R.id.sw_crashlytics);
 
         etKey = view.findViewById(R.id.et_key);
 
-        //TODO: change Toast Message
+        view.findViewById(R.id.tv_aggressive).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Toast.makeText(mContext, getString(R.string.aggressive_mode_toast), Toast.LENGTH_LONG).show();
+            }
+        });
         view.findViewById(R.id.tv_analytics).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -80,8 +86,6 @@ public class SettingsFrag extends Fragment {
         });
 
         sp = mContext.getSharedPreferences(getString(R.string.app_title), MODE_PRIVATE);
-
-        monitor = new ComponentName(mContext.getPackageName(), BluetoothMonitor.class.getName());
 
         setSwitchOnCheckedChangeListener();
         setEditTextListener();
@@ -101,19 +105,26 @@ public class SettingsFrag extends Fragment {
 
         isPermissionGranted = mContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
 
-        mContext.setSwitchAccent(new Switch[]{swLocation, swAdvertise, swAnalytics, swCrashlytics});
+        mContext.setSwitchAccent(new Switch[]{swLocation, swAggressive, swAnalytics, swCrashlytics});
         swLocation.setChecked(isPermissionGranted);
         swLocation.setClickable(!isPermissionGranted);
 
-        swAdvertise.setChecked(mContext.getPackageManager().getComponentEnabledSetting(monitor) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED);
-        try {
-            ApplicationInfo appInfo = mContext.getPackageManager().getApplicationInfo(mContext.getPackageName(), PackageManager.GET_META_DATA);
-            //TODO: Analytics and Crashlytics setChecked
-//            swAnalytics.setChecked(appInfo.metaData.getBoolean("firebase_analytics_collection_enabled"));
-//            swCrashlytics.setChecked(appInfo.metaData.getBoolean("firebase_crashlytics_collection_enabled"));
-        } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
-        }
+        swAggressive.setChecked(sp.getBoolean("aggressive", true));
+
+        Analytics.isEnabled().thenAccept(new AppCenterConsumer<Boolean>() {
+
+            @Override
+            public void accept(Boolean enabled) {
+                swAnalytics.setChecked(enabled);
+            }
+        });
+        Crashes.isEnabled().thenAccept(new AppCenterConsumer<Boolean>() {
+
+            @Override
+            public void accept(Boolean enabled) {
+                swCrashlytics.setChecked(enabled);
+            }
+        });
 
     }
 
@@ -136,23 +147,28 @@ public class SettingsFrag extends Fragment {
                             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_PERMISSION_CODE);
                         }
                         break;
-                    case R.id.sw_enable:
-                        mContext.getPackageManager().setComponentEnabledSetting(
-                                monitor,
-                                isChecked ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                                PackageManager.DONT_KILL_APP);
+                    case R.id.sw_aggressive:
+                        SharedPreferences.Editor editor = sp.edit();
+                        editor.putBoolean("aggressive", isChecked);
+                        editor.apply();
+                        if (!isChecked)
+                            Analytics.trackEvent("Aggressive_Mode_Off");
                         break;
                     case R.id.sw_analytics:
-                        //TODO: analytics
+                        if (!isChecked)
+                            Analytics.trackEvent("Analytics_Down");
+                        Analytics.setEnabled(isChecked);
                         break;
                     case R.id.sw_crashlytics:
-                        //TODO: crashlytics
+                        if (!isChecked)
+                            Analytics.trackEvent("Crashlytics_Down");
+                        Crashes.setEnabled(isChecked);
                         break;
                 }
             }
         };
         swLocation.setOnCheckedChangeListener(swListener);
-        swAdvertise.setOnCheckedChangeListener(swListener);
+        swAggressive.setOnCheckedChangeListener(swListener);
         swAnalytics.setOnCheckedChangeListener(swListener);
         swCrashlytics.setOnCheckedChangeListener(swListener);
     }
@@ -167,7 +183,6 @@ public class SettingsFrag extends Fragment {
                     switch (event.getKeyCode()) {
                         case KeyEvent.KEYCODE_ENTER:
                         case KeyEvent.KEYCODE_NUMPAD_ENTER:
-                            Log.d(TAG, "Enter");
                             InputMethodManager imm = (InputMethodManager) mContext.getSystemService(Context.INPUT_METHOD_SERVICE);
                             imm.hideSoftInputFromWindow(mContext.getWindow().getDecorView().getWindowToken(), 0);
                             etKey.clearFocus();
@@ -182,7 +197,6 @@ public class SettingsFrag extends Fragment {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
                 if (actionId == EditorInfo.IME_ACTION_DONE) {
-                    Log.d(TAG, "Action Done");
                     saveKey(etKey.getText().toString());
                     return false;
                 }

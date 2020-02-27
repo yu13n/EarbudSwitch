@@ -5,6 +5,8 @@ import android.animation.ValueAnimator;
 import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
 import android.graphics.drawable.Drawable;
+import android.os.Handler;
+import android.os.Message;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,9 +15,11 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.Timer;
 
 public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHolder> {
 
@@ -24,6 +28,59 @@ public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHold
     private OnItemClickListener mOnItemClickListener;
     private OnItemLongClickListener mOnItemLongClickListener;
     private int refreshPosition = -1;
+    private Timer timer;
+    private MyHandler myHandler = new MyHandler(this);
+
+    private static class MyHandler extends Handler {
+        WeakReference<DevicesAdapter> mainAdapterWeakReference;
+
+        MyHandler(DevicesAdapter adapter) {
+            mainAdapterWeakReference = new WeakReference<DevicesAdapter>(adapter);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            DevicesAdapter adapter = mainAdapterWeakReference.get();
+            if (adapter != null) {
+                int index = (int) msg.obj;
+                adapter.notifyItemChanged(index);
+            }
+        }
+    }
+
+    void startTimer() {
+        final int interval = 4000;
+        if (timer != null) {
+            timer.cancel();
+        }
+        timer = new Timer();
+        timer.schedule(new java.util.TimerTask() {
+
+            @Override
+            public void run() {
+                for (int i = 0; i < bondedDevices.size(); i++) {
+                    RecycleItem item = bondedDevices.get(i);
+                    if (item.lastSeen == 0) {
+                        continue;
+                    }
+                    if (System.currentTimeMillis() - item.lastSeen >= interval) {
+                        item.setUnavailable();
+                        bondedDevices.set(i, item);
+                        Message message = myHandler.obtainMessage();
+                        message.obj = i;
+                        myHandler.sendMessage(message);
+                    }
+                }
+            }
+        }, interval, interval);
+    }
+
+    void stopTimer() {
+        if (timer != null) {
+            timer.cancel();
+        }
+    }
 
     public interface OnItemClickListener {
         void onItemClick(View view, int position);
@@ -92,20 +149,18 @@ public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHold
 
         if (item.isConnected) {
             holder.tvDevice.setCompoundDrawables(drawables.get("hs"), null, drawables.get("ed"), null);
+        } else if (position == refreshPosition) {
+            holder.tvDevice.setCompoundDrawables(drawables.get("hs"), null, drawables.get("re"), null);
+
+            ObjectAnimator anim = ObjectAnimator.ofInt(holder.tvDevice.getCompoundDrawables()[2], "level", 0, 10000);
+            anim.setDuration(1000);
+            anim.setRepeatMode(ValueAnimator.RESTART);
+            anim.setRepeatCount(50);
+            anim.start();
         } else if (item.serverAddress != null && !item.serverAddress.isEmpty()) {
             holder.tvDevice.setCompoundDrawables(drawables.get("hs"), null, drawables.get("able"), null);
         } else {
-            if (position == refreshPosition) {
-                holder.tvDevice.setCompoundDrawables(drawables.get("hs"), null, drawables.get("re"), null);
-
-                ObjectAnimator anim = ObjectAnimator.ofInt(holder.tvDevice.getCompoundDrawables()[2], "level", 0, 10000);
-                anim.setDuration(1000);
-                anim.setRepeatMode(ValueAnimator.RESTART);
-                anim.setRepeatCount(50);
-                anim.start();
-            } else {
-                holder.tvDevice.setCompoundDrawables(drawables.get("hs"), null, null, null);
-            }
+            holder.tvDevice.setCompoundDrawables(drawables.get("hs"), null, null, null);
         }
 
         if (mOnItemClickListener != null) {
@@ -129,7 +184,6 @@ public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHold
         }
     }
 
-
     void setConnectable(RecycleItem item) {
         for (int i = 0; i < bondedDevices.size(); i++) {
             RecycleItem tempItem = bondedDevices.get(i);
@@ -141,7 +195,8 @@ public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHold
         }
     }
 
-    void setConnected(BluetoothDevice device, boolean isConnected) {
+
+    void setConnected(final BluetoothDevice device, boolean isConnected) {
         RecycleItem item = new RecycleItem(device);
         item.isConnected = isConnected;
         RecycleItem tempItem;
@@ -162,9 +217,12 @@ public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHold
         bondedDevices.clear();
         if (devices != null && !devices.isEmpty())
             for (BluetoothDevice device : devices) {
-                if (BluetoothClass.Device.Major.AUDIO_VIDEO == device.getBluetoothClass().getMajorDeviceClass()
-                        && device.getName() != null && !device.getName().isEmpty())
+                if (device.getName() == null || device.getName().isEmpty()) {
+                    continue;
+                }
+                if (device.getBluetoothClass().hasService(BluetoothClass.Service.AUDIO)) {
                     bondedDevices.add(new RecycleItem(device));
+                }
             }
         notifyDataSetChanged();
     }

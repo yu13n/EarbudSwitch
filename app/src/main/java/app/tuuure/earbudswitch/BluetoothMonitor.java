@@ -15,25 +15,18 @@ public class BluetoothMonitor extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
-        Log.d(TAG, "Broadcast Captured, action: " + action);
         BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
         if (BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED.equals(action)) {
             int state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1);
-            switch (state) {
-                case BluetoothProfile.STATE_CONNECTED:
-                    Intent service = new Intent(context, EarbudService.class);
-                    service.putExtra(BluetoothDevice.EXTRA_DEVICE, device);
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        context.startForegroundService(service);
-                    } else {
-                        context.startService(service);
-                    }
-                    break;
-                case BluetoothProfile.STATE_DISCONNECTED:
-                    Intent stopIntent = new Intent();
-                    stopIntent.setAction(EarbudService.CHANNEL_ID);
-                    context.sendBroadcast(stopIntent);
-                    break;
+            if (state == BluetoothProfile.STATE_CONNECTED) {
+                Log.d(TAG, String.format("Device %1$s Connected", device.getName()));
+                Intent service = new Intent(context, EarbudService.class);
+                service.putExtra(BluetoothDevice.EXTRA_DEVICE, device);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(service);
+                } else {
+                    context.startService(service);
+                }
             }
         }
     }

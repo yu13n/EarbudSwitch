@@ -9,30 +9,29 @@ import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.content.res.TypedArray;
-import android.graphics.BlendMode;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
-import android.os.Debug;
-import android.os.Environment;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.Window;
 import android.widget.Switch;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
+
+import com.microsoft.appcenter.AppCenter;
+import com.microsoft.appcenter.analytics.Analytics;
+import com.microsoft.appcenter.crashes.Crashes;
 
 public class DialogActivity extends AppCompatActivity {
     final static String TAG = "EBSDialog";
@@ -54,17 +53,21 @@ public class DialogActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dialog);
+
         Toolbar toolbar = findViewById(R.id.tb_dialog);
+
         setSupportActionBar(toolbar);
+
         getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+        AppCenter.start(getApplication(), "", Analytics.class, Crashes.class);
 
         viewPager = findViewById(R.id.viewpage);
         PaperAdapter paperAdapter = new PaperAdapter(this);
         viewPager.setAdapter(paperAdapter);
         viewPager.setPageTransformer(new DepthPageTransformer());
 
-        //TODO: APP_OPEN
-
+        Analytics.trackEvent("APP_OPEN");
     }
 
     @Override
@@ -76,7 +79,6 @@ public class DialogActivity extends AppCompatActivity {
             finish();
         }
         bluetoothAdapter = bluetoothManager.getAdapter();
-
     }
 
     @Override
@@ -137,14 +139,10 @@ public class DialogActivity extends AppCompatActivity {
                 if (positionOffset == 0) {
                     if (position == 0) {
                         menuSwitch.setVisible(true);
-                        //menuSwitch.getActionView().setAlpha(1);
                         menuSettings.setVisible(false);
-                        //menuSettings.getActionView().setAlpha(0);
                     } else {
                         menuSwitch.setVisible(false);
-                        //menuSwitch.getActionView().setAlpha(0);
                         menuSettings.setVisible(true);
-                        //menuSettings.getActionView().setAlpha(1);
                     }
                 } else if (positionOffset <= 0.5) {
                     float alpha = (float) (Math.cos((2 - 2 * positionOffset) * 3.14) / 2 + 0.5);
@@ -180,10 +178,6 @@ public class DialogActivity extends AppCompatActivity {
         } else {
             viewPager.setCurrentItem(viewPager.getCurrentItem() - 1);
         }
-    }
-
-    int getPageNum() {
-        return viewPager.getCurrentItem();
     }
 
     void setSwitchAccent(Switch[] sw) {
@@ -230,7 +224,7 @@ public class DialogActivity extends AppCompatActivity {
         @Override
         public Fragment createFragment(int position) {
             Fragment frag;
-            //Bundle args = new Bundle();
+
             switch (position) {
                 case 0:
                     frag = new DevicesFrag();
@@ -249,7 +243,6 @@ public class DialogActivity extends AppCompatActivity {
         }
     }
 
-    @RequiresApi(21)
     public class DepthPageTransformer implements ViewPager2.PageTransformer {
         @Override
         public void transformPage(View page, float position) {

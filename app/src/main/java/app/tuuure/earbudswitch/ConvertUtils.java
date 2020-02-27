@@ -1,20 +1,28 @@
 package app.tuuure.earbudswitch;
 
-import android.util.Base64;
 import android.util.Log;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.apache.commons.codec.digest.MurmurHash3;
+
 class ConvertUtils {
     private static final String TAG = "ConverUtils";
+    private static final int SEED = 1030;
+
+    static byte[] mur32b(String content) {
+        byte[] bytes = content.getBytes();
+        long i = MurmurHash3.hash64(bytes, 0, bytes.length, SEED);
+        ByteBuffer buffer = ByteBuffer.allocate(8);
+        buffer.putLong(i);
+        return buffer.array();
+    }
 
     static byte[] hmacMD5(String content, String key) {
         byte[] digest;
@@ -33,33 +41,27 @@ class ConvertUtils {
         return digest;
     }
 
-    static String md5code32(String content) {
-        byte[] hash;
-        try {
-            hash = MessageDigest.getInstance("MD5").digest(content.getBytes(StandardCharsets.UTF_8));
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("NoSuchAlgorithmException", e);
-        }
-        //对生成的16字节数组进行补零操作
-        StringBuilder hex = new StringBuilder(hash.length * 2);
-        for (byte b : hash) {
-            if ((b & 0xFF) < 0x10) {
-                hex.append("0");
-            }
-            hex.append(Integer.toHexString(b & 0xFF));
-        }
-        for (int i = 8; i <= 23; i += 5) {
-            hex.insert(i, "-");
-        }
-        return hex.toString();
+    static byte[] uuidToBytes(UUID uuid) {
+        ByteBuffer buffer = ByteBuffer.wrap(new byte[Long.BYTES * 2]);
+        buffer.putLong(uuid.getMostSignificantBits());
+        buffer.putLong(uuid.getLeastSignificantBits());
+        return buffer.array();
     }
 
-    static byte[] uuidToBytes(UUID uuid) {
-        ByteBuffer bb = ByteBuffer.wrap(new byte[16]);
-        bb.putLong(uuid.getMostSignificantBits());
-        bb.putLong(uuid.getLeastSignificantBits());
-        return bb.array();
+    static long bytesToLong(byte[] bytes) {
+        if (bytes == null) {
+            return 0;
+        }
+        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+        buffer.put(bytes, 0, bytes.length);
+        buffer.flip();
+        return buffer.getLong();
     }
+
+    static UUID bytesToUUID(byte[] byteArray1, byte[] byteArray2) {
+        return new UUID(bytesToLong(byteArray1), bytesToLong(byteArray2));
+    }
+
 
     static UUID bytesToUUID(byte[] inputByteArray) {
         ByteBuffer bb = ByteBuffer.wrap(inputByteArray);

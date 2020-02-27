@@ -29,27 +29,31 @@ import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.microsoft.appcenter.analytics.Analytics;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
-import static app.tuuure.earbudswitch.ConvertUtils.md5code32;
+import static app.tuuure.earbudswitch.ConvertUtils.bytesToLong;
+import static app.tuuure.earbudswitch.ConvertUtils.mur32b;
 
 public class DevicesFrag extends Fragment {
-    final static String TAG = "FragDevice";
+    private final static String TAG = "FragDevice";
     private DialogActivity mContext;
     private RecyclerView rvDialog;
     private DevicesAdapter rvAdapter;
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothLeScanner bluetoothLeScanner;
-    private HashMap<String, String> boundeDevices = new HashMap<>(10);
+    private HashMap<Long, String> boundeDevices = new HashMap<>(10);
+    private BleClient client;
 
     private BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if (action == null) {
-                Log.e(TAG, "Receiver action null");
                 return;
             }
             int state;
@@ -131,7 +135,7 @@ public class DevicesFrag extends Fragment {
                 if (item.isConnected) {
                     Intent service = new Intent(mContext, EarbudService.class);
                     service.putExtra(BluetoothDevice.EXTRA_DEVICE, device);
-                    //TODO: ManuAdvertise
+                    Analytics.trackEvent("ManuAdvertise");
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         mContext.startForegroundService(service);
                     } else {
@@ -141,11 +145,13 @@ public class DevicesFrag extends Fragment {
                 }
                 Log.d(TAG, item.budsName + item.serverAddress);
                 if (item.serverAddress == null || item.serverAddress.isEmpty()) {
-                    //TODO: NormalConnect
+                    Analytics.trackEvent("NormalConnect");
                     ProfileManager.connect(mContext, device);
                 } else {
-                    //TODO: EBSConnect
-                    BleClient client = new BleClient(mContext, bluetoothAdapter.getRemoteDevice(item.budsAddress));
+                    Analytics.trackEvent("EBSConnect");
+
+                    rvAdapter.setRefreshPosition(device);
+                    client = new BleClient(mContext, device);
                     client.bluetoothGatt = bluetoothAdapter.getRemoteDevice(item.serverAddress)
                             .connectGatt(mContext, false, client.bluetoothGattCallback);
                 }
@@ -158,7 +164,7 @@ public class DevicesFrag extends Fragment {
                 RecycleItem item = (RecycleItem) rvAdapter.bondedDevices.toArray()[position];
                 BluetoothDevice device = bluetoothAdapter.getRemoteDevice(item.budsAddress);
                 if (item.isConnected) {
-                    //TODO: ManuDisconnect
+                    Analytics.trackEvent("ManuDisconnect");
                     ProfileManager.disconnect(mContext, device);
                 }
             }
@@ -166,21 +172,22 @@ public class DevicesFrag extends Fragment {
         rvDialog.setAdapter(rvAdapter);
     }
 
+    private long startTime;
+    private boolean isFirstFind = true;
+
     @Override
     public void onResume() {
         super.onResume();
+        startTime = System.currentTimeMillis();
+
         rvAdapter.setRefreshPosition(null);
         //注册监听蓝牙状态的receiver
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
         intentFilter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
         mContext.registerReceiver(receiver, intentFilter);
-        Log.d(TAG, "Receiver registered");
 
         rvAdapter.devicesReset(bluetoothAdapter.getBondedDevices());
-
-        bluetoothAdapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.A2DP);
-        bluetoothAdapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.HEADSET);
 
         new Thread(new Runnable() {
             @Override
@@ -188,7 +195,7 @@ public class DevicesFrag extends Fragment {
                 ArrayList<RecycleItem> devices = rvAdapter.getData();
                 if (devices != null && !devices.isEmpty()) {
                     for (RecycleItem item : devices) {
-                        boundeDevices.put(md5code32(item.budsAddress), item.budsAddress);
+                        boundeDevices.put(bytesToLong(mur32b(item.budsAddress)), item.budsAddress);
                     }
                     if (bluetoothAdapter.isEnabled() && mContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                         scanBle();
@@ -196,6 +203,11 @@ public class DevicesFrag extends Fragment {
                 }
             }
         }).start();
+
+        bluetoothAdapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.A2DP);
+        bluetoothAdapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.HEADSET);
+
+        rvAdapter.startTimer();
     }
 
     @Override
@@ -206,9 +218,19 @@ public class DevicesFrag extends Fragment {
             bluetoothLeScanner = null;
         }
 
+        rvAdapter.stopTimer();
+
+        if (client != null && client.receiver != null) {
+            try {
+                mContext.unregisterReceiver(client.receiver);
+            } catch (IllegalArgumentException e) {
+                e.printStackTrace();
+            }
+        }
+
+
         try {
             mContext.unregisterReceiver(receiver);
-            Log.d(TAG, "Receiver unregistered");
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
         }
@@ -236,31 +258,40 @@ public class DevicesFrag extends Fragment {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             BluetoothDevice server = result.getDevice();
-            String budsAddress = null;
-            String budsName = null;
             List<ParcelUuid> serviceData = result.getScanRecord().getServiceUuids();
 
-            if (serviceData.isEmpty()) {
-                Log.d(TAG, "Empty ServiceData");
-                super.onScanResult(callbackType, result);
+            if (serviceData == null || serviceData.isEmpty()) {
+                return;
             }
 
             for (ParcelUuid uuid : serviceData) {
-                budsAddress = boundeDevices.get(uuid.toString());
-                if (budsAddress != null) {
-                    BluetoothDevice target = bluetoothAdapter.getRemoteDevice(budsAddress);
-                    if (target != null) {
-                        budsName = target.getName();
-                        break;
+                long bits = uuid.getUuid().getMostSignificantBits();
+                if (!boundeDevices.containsKey(bits)) {
+                    bits = uuid.getUuid().getLeastSignificantBits();
+                    if (!boundeDevices.containsKey(bits)) {
+                        continue;
+                    }
+                }
+                String budsAddress = boundeDevices.get(bits);
+                BluetoothDevice target = bluetoothAdapter.getRemoteDevice(budsAddress);
+                if (target != null) {
+                    String budsName = target.getName();
+                    if (budsName != null) {
+                        RecycleItem item = new RecycleItem(budsName, budsAddress, server.getAddress(), System.currentTimeMillis());
+                        rvAdapter.setConnectable(item);
+
+                        Log.d(TAG, String.format("Device %1$s discoverd, Server %2$s", budsName, server.getAddress()));
+                        if (isFirstFind) {
+                            long time = System.currentTimeMillis() - startTime;
+                            //Map<String, String> properties = new HashMap<>();
+                            //properties.put("Time", String.valueOf(time));
+                            Log.d(TAG, String.format("After %1$d ms", time));
+                            //Analytics.trackEvent("ScanTime", properties);
+                            isFirstFind = false;
+                        }
                     }
                 }
             }
-            if (budsAddress != null && budsName != null) {
-                RecycleItem item = new RecycleItem(budsName, budsAddress, server.getAddress());
-                rvAdapter.setConnectable(item);
-                Log.d(TAG, "Discovered " + budsName + " Server " + server.getAddress());
-            }
-
             super.onScanResult(callbackType, result);
         }
 
@@ -271,25 +302,41 @@ public class DevicesFrag extends Fragment {
 
         @Override
         public void onScanFailed(int errorCode) {
+            Log.d(TAG, "Scan Failed" + errorCode);
             super.onScanFailed(errorCode);
         }
     };
+
+    private static final ParcelUuid head = new ParcelUuid(UUID.fromString("FFFFFFFF-FFFF-FFFF-0000-000000000000"));
+    private static final ParcelUuid tail = new ParcelUuid(UUID.fromString("00000000-0000-0000-FFFF-FFFFFFFFFFFF"));
 
     private void scanBle() {
         bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
 
         List<ScanFilter> filters = new ArrayList<>(10);
-        ScanFilter.Builder builder = new ScanFilter.Builder();
 
         if (boundeDevices.isEmpty()) {
-            Log.d(TAG, "Empty Bounded Audio Devices");
             return;
         }
 
-        for (String key : boundeDevices.keySet()) {
-            Log.d(TAG, "Ble Scan filter: " + key);
-            ScanFilter filter = builder
-                    .setServiceUuid(ParcelUuid.fromString(key))
+        for (long bits : boundeDevices.keySet()) {
+
+            ScanFilter filter;
+
+            ParcelUuid parcelUuid = new ParcelUuid(new UUID(bits, bits));
+
+            filter = new ScanFilter.Builder()
+                    .setServiceUuid(parcelUuid)
+                    .build();
+            filters.add(filter);
+
+            filter = new ScanFilter.Builder()
+                    .setServiceUuid(parcelUuid, head)
+                    .build();
+            filters.add(filter);
+
+            filter = new ScanFilter.Builder()
+                    .setServiceUuid(parcelUuid, tail)
                     .build();
             filters.add(filter);
         }
@@ -298,6 +345,8 @@ public class DevicesFrag extends Fragment {
                 .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
                 .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
                 .setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
+                .setNumOfMatches(ScanSettings.MATCH_NUM_ONE_ADVERTISEMENT)
+                .setReportDelay(0)
                 .build();
 
         bluetoothLeScanner.startScan(filters, scanSettings, scanCallback);

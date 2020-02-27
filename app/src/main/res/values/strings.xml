@@ -2,7 +2,7 @@
     <string name="app_name" translatable="false">EBS</string>
     <string name="app_title" translatable="false">Earbudswitch</string>
     <string name="location_permission">Location Permission</string>
-    <string name="ebs_enable">Auto Advertise</string>
+    <string name="aggressive_mode">Aggressive Mode</string>
     <string name="edittext_hint">Key</string>
     <string name="turning_on">Turning On&#8230;</string>
     <string name="connecting_device">Connecting &#8230;</string>
@@ -10,9 +10,15 @@
     <string name="unsupport_ble">BLE is unsupported on the device</string>
     <string name="request_permission">ACCESS_FINE_LOCATION permission is needed for BLE scan</string>
     <string name="notification_content">%1$s Advertising</string>
-    <string name="firebase_analytics" translatable="false">Firebase Analytics</string>
-    <string name="firebase_analytics_toast">If enabled, App will upload the frequency of function usage using Firebase Analytics.</string>
+    <string name="firebase_analytics">Analytics</string>
+    <string name="firebase_analytics_toast">If enabled, App will upload the frequency of function usage to Visual Studio App Center.</string>
     <string name="unknown_device">Unknown Device</string>
-    <string name="firebase_crashlytics" translatable="false">Firebase Crashlytics</string>
-    <string name="firebase_crashlytics_toast">If enabled, App will report crash using Firebase Crashlytics.</string>
+    <string name="firebase_crashlytics">Crashlytics</string>
+    <string name="firebase_crashlytics_toast">If enabled, App will upload crashes to Visual Studio App Center.</string>
+    <string name="aggressive_mode_toast">Fasten EBS connecting. Recommend On</string>
+    <string name="dialog_feedback">Feedback</string>
+    <string name="dialog_istws">Using a TWS+ device?</string>
+    <string name="dialog_yes">Yes</string>
+    <string name="dialog_no">No</string>
+    <string name="dialog_cancel">Cancel</string>
 </resources>

@@ -1,4 +1,4 @@
-package app.tuuure.earbudswitch;
+package app.tuuure.earbudswitch.Utils;
 
 import android.bluetooth.BluetoothA2dp;
 import android.bluetooth.BluetoothAdapter;
@@ -11,15 +11,15 @@ import android.util.Log;
 
 import java.lang.reflect.Method;
 
-class ProfileManager {
-    static final String TAG = "ProfileManager";
+public class ProfileManager {
+    private static final String TAG = "ProfileManager";
     private static final String CONNECT = "connect";
     private static final String DISCONNECT = "disconnect";
 
     private static void manage(Context mContext, final String action, final BluetoothDevice device) {
-        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         BluetoothProfile.ServiceListener proxyListener = new BluetoothProfile.ServiceListener() {
-            BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
             @Override
             public void onServiceDisconnected(int profile) {
             }
@@ -39,7 +39,6 @@ class ProfileManager {
                         return;
                 }
                 try {
-                    //通过反射获取BluetoothA2dp中connect方法（hide的），进行连接。
                     Method connectMethod = proxyClass.getDeclaredMethod(action, BluetoothDevice.class);
                     if (action.equals(DISCONNECT)) {
                         if (device == null) {
@@ -64,15 +63,15 @@ class ProfileManager {
         bluetoothAdapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.HEADSET);
     }
 
-    static void disconnect(Context mContext, BluetoothDevice device) {
+    public static void disconnect(Context mContext, BluetoothDevice device) {
         manage(mContext, DISCONNECT, device);
     }
 
-    static void connect(Context mContext, BluetoothDevice device) {
+    public static void connect(Context mContext, BluetoothDevice device) {
         manage(mContext, CONNECT, device);
     }
 
-    static int getConnectionState() {
+    public static int getConnectionState() {
         try {
             Method method = BluetoothAdapter.class.getDeclaredMethod("getConnectionState");
             return (int) method.invoke(BluetoothAdapter.getDefaultAdapter());

@@ -1,13 +1,10 @@
 package app.tuuure.earbudswitch;
 
 import android.Manifest;
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -31,6 +28,8 @@ import com.microsoft.appcenter.utils.async.AppCenterConsumer;
 
 import java.util.Random;
 
+import app.tuuure.earbudswitch.Utils.SharedPreferencesUtils;
+
 import static android.content.Context.MODE_PRIVATE;
 
 public class SettingsFrag extends Fragment {
@@ -43,7 +42,6 @@ public class SettingsFrag extends Fragment {
     private Switch swAnalytics;
     private Switch swCrashlytics;
     private EditText etKey;
-    private SharedPreferences sp;
 
     private Boolean isPermissionGranted;
 
@@ -85,8 +83,6 @@ public class SettingsFrag extends Fragment {
             }
         });
 
-        sp = mContext.getSharedPreferences(getString(R.string.app_title), MODE_PRIVATE);
-
         setSwitchOnCheckedChangeListener();
         setEditTextListener();
 
@@ -96,7 +92,7 @@ public class SettingsFrag extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        String key = sp.getString("key", "");
+        String key = SharedPreferencesUtils.getInstance().getKey();
         if (key.isEmpty()) {
             saveKey("");
         } else {
@@ -109,7 +105,7 @@ public class SettingsFrag extends Fragment {
         swLocation.setChecked(isPermissionGranted);
         swLocation.setClickable(!isPermissionGranted);
 
-        swAggressive.setChecked(sp.getBoolean("aggressive", true));
+        swAggressive.setChecked(SharedPreferencesUtils.getInstance().getAggre());
 
         Analytics.isEnabled().thenAccept(new AppCenterConsumer<Boolean>() {
 
@@ -148,9 +144,7 @@ public class SettingsFrag extends Fragment {
                         }
                         break;
                     case R.id.sw_aggressive:
-                        SharedPreferences.Editor editor = sp.edit();
-                        editor.putBoolean("aggressive", isChecked);
-                        editor.apply();
+                        SharedPreferencesUtils.getInstance().putAggre(isChecked);
                         if (!isChecked)
                             Analytics.trackEvent("Aggressive_Mode_Off");
                         break;
@@ -222,13 +216,11 @@ public class SettingsFrag extends Fragment {
     }
 
     private void saveKey(String key) {
-        SharedPreferences.Editor editor = sp.edit();
         if (key.isEmpty()) {
             Random r = new Random();
             key = String.valueOf(r.nextInt(900000) + 100000);
         }
-        editor.putString("key", key);
-        editor.apply();
+        SharedPreferencesUtils.getInstance().putKey(key);
         etKey.setText(key);
     }
 

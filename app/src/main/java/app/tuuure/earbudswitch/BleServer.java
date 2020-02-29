@@ -17,16 +17,22 @@ import android.bluetooth.le.BluetoothLeAdvertiser;
 import android.content.Context;
 import android.os.ParcelUuid;
 import android.util.Log;
+import android.widget.Toast;
 
-import java.nio.charset.StandardCharsets;
+import com.microsoft.appcenter.analytics.Analytics;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import static app.tuuure.earbudswitch.ConvertUtils.bytesToUUID;
-import static app.tuuure.earbudswitch.ConvertUtils.hmacMD5;
-import static app.tuuure.earbudswitch.ConvertUtils.mur32b;
-import static app.tuuure.earbudswitch.ConvertUtils.uuidToBytes;
+import app.tuuure.earbudswitch.Utils.ProfileManager;
+import app.tuuure.earbudswitch.Utils.SharedPreferencesUtils;
+import app.tuuure.earbudswitch.Utils.TwsUtils;
+
+import static app.tuuure.earbudswitch.Utils.ConvertUtils.hmacMD5;
+import static app.tuuure.earbudswitch.Utils.ConvertUtils.md5code32;
+import static app.tuuure.earbudswitch.Utils.ConvertUtils.uuidToBytes;
 
 class BleServer {
     private static final String TAG = "BleServer";
@@ -34,10 +40,10 @@ class BleServer {
     private Context mContext;
     private BluetoothAdapter bluetoothAdapter;
     private UUID saltUUID;
-
-    private BluetoothDevice primaryDevice = null, seconderyDevice = null;
+    private ArrayList<AdvertiseCallback> callbacks = new ArrayList<>(2);
+    private ArrayList<BluetoothDevice> devices = new ArrayList<>(2);
     private byte[] authCode;
-    private BluetoothLeAdvertiser bluetoothLeAdvertiser;
+    private BluetoothLeAdvertiser bluetoothLeAdvertiser = null;
     private BluetoothGattServer gattServer;
 
     BleServer(Context context) {
@@ -46,10 +52,9 @@ class BleServer {
 
         saltUUID = UUID.randomUUID();
         Log.d(TAG, "saltUUID: " + saltUUID.toString());
-        String authKey = mContext.getSharedPreferences(mContext.getString(R.string.app_title), Context.MODE_PRIVATE).getString("key", "114514");
+        String authKey = SharedPreferencesUtils.getInstance().getKey();
         authCode = hmacMD5(saltUUID.toString(), authKey);
         openGattServer();
-        fetchDeivces();
     }
 
     private void openGattServer() {
@@ -57,43 +62,32 @@ class BleServer {
         gattServer = bluetoothManager.openGattServer(mContext, gattServerCallback);
     }
 
-    private void fetchDeivces() {
-        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        BluetoothProfile.ServiceListener proxyListener = new BluetoothProfile.ServiceListener() {
-            BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-
-            @Override
-            public void onServiceDisconnected(int profile) {
-            }
-
-            @Override
-            public void onServiceConnected(int profile, BluetoothProfile proxy) {
-                for (BluetoothDevice device : proxy.getConnectedDevices()) {
-                    addDevice(device);
-                }
-                bluetoothAdapter.closeProfileProxy(profile, proxy);
-            }
-        };
-        bluetoothAdapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.A2DP);
-        bluetoothAdapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.HEADSET);
+    String[] getDevicesAddress() {
+        ArrayList<String> result = new ArrayList<>(2);
+        for (BluetoothDevice device : devices) {
+            result.add(device.getAddress());
+        }
+        return (String[]) result.toArray();
     }
 
     private ConcurrentLinkedQueue<BluetoothDevice> queue = new ConcurrentLinkedQueue<>();
 
     void addDevice(BluetoothDevice device) {
-        if (primaryDevice == null) {
-            primaryDevice = device;
-        } else if (seconderyDevice == null && !primaryDevice.equals(device)) {
-            seconderyDevice = device;
-        } else {
-            return;
-        }
+        devices.add(device);
 
-        stopAdvertise();
+        if (devices.size() == 2) {
+            TwsUtils.isTWS(mContext, getDevicesAddress(), new TwsUtils.Callback() {
+                @Override
+                public void notice() {
+                    TwsUtils.putTWS(getDevicesAddress());
+                }
+            });
+        }
 
         boolean isEmpty = queue.isEmpty();
         queue.offer(device);
         if (isEmpty) {
+            stopAdvertise();
             addService(device);
         }
     }
@@ -103,7 +97,7 @@ class BleServer {
             advertise();
             return;
         }
-        UUID uuid = UUID.nameUUIDFromBytes(device.getAddress().getBytes(StandardCharsets.UTF_8));
+        UUID uuid = md5code32(device.getAddress());
         BluetoothGattService gattService = new BluetoothGattService(uuid, BluetoothGattService.SERVICE_TYPE_PRIMARY);
         BluetoothGattCharacteristic gattCharacteristic = new BluetoothGattCharacteristic(uuid,
                 BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_WRITE | BluetoothGattCharacteristic.PROPERTY_NOTIFY,
@@ -114,21 +108,6 @@ class BleServer {
         gattServer.addService(gattService);
     }
 
-    //广播Callback
-    private final AdvertiseCallback advertiseCallback = new AdvertiseCallback() {
-        @Override
-        public void onStartSuccess(AdvertiseSettings settingsInEffect) {
-            Log.d(TAG, "advertising");
-            super.onStartSuccess(settingsInEffect);
-        }
-
-        @Override
-        public void onStartFailure(int errorCode) {
-            Log.d(TAG, "advertise error: " + errorCode);
-            super.onStartFailure(errorCode);
-        }
-    };
-
     private void advertise() {
         bluetoothLeAdvertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
         AdvertiseSettings advertiseSettings = new AdvertiseSettings.Builder()
@@ -138,31 +117,49 @@ class BleServer {
                 .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_ULTRA_LOW)
                 .build();
 
-        if (primaryDevice == null) {
-            Log.e(TAG, "Advertise PrimaryDevice null");
-            return;
+        if (!devices.isEmpty()) {
+            for (BluetoothDevice device : devices) {
+                if (callbacks.size() == 1 && !bluetoothAdapter.isMultipleAdvertisementSupported()) {
+                    Toast.makeText(mContext, "不支持多广播", Toast.LENGTH_SHORT).show();
+                    Analytics.trackEvent("Not Support MultipleAdvertisement");
+                    break;
+                }
+
+                AdvertiseData advertiseData = new AdvertiseData.Builder()
+                        .setIncludeDeviceName(false)
+                        .setIncludeTxPowerLevel(false)
+                        .addServiceUuid(new ParcelUuid(md5code32(device.getAddress())))
+                        .build();
+
+                AdvertiseCallback advertiseCallback = new AdvertiseCallback() {
+                    @Override
+                    public void onStartSuccess(AdvertiseSettings settingsInEffect) {
+                        Log.d(TAG, "advertising");
+                        super.onStartSuccess(settingsInEffect);
+                    }
+
+                    @Override
+                    public void onStartFailure(int errorCode) {
+                        Log.d(TAG, "advertise error: " + errorCode);
+                        super.onStartFailure(errorCode);
+                    }
+                };
+
+                bluetoothLeAdvertiser.startAdvertising(advertiseSettings, advertiseData, advertiseCallback);
+                callbacks.add(advertiseCallback);
+            }
         }
-        byte[] primaryBits = mur32b(primaryDevice.getAddress());
-
-        AdvertiseData advertiseData = new AdvertiseData.Builder()
-                .setIncludeDeviceName(false)
-                .setIncludeTxPowerLevel(false)
-                .addServiceUuid(
-                        new ParcelUuid(
-                                bytesToUUID(
-                                        primaryBits,
-                                        seconderyDevice != null ? mur32b(seconderyDevice.getAddress()) : primaryBits
-                                )
-                        )
-                )
-                .build();
-
-        bluetoothLeAdvertiser.startAdvertising(advertiseSettings, advertiseData, advertiseCallback);
     }
 
     void stopAdvertise() {
         if (bluetoothLeAdvertiser != null) {
-            bluetoothLeAdvertiser.stopAdvertising(advertiseCallback);
+            if (!callbacks.isEmpty()) {
+                for (AdvertiseCallback callback : callbacks) {
+                    bluetoothLeAdvertiser.stopAdvertising(callback);
+                }
+                callbacks.clear();
+            }
+            bluetoothLeAdvertiser = null;
         }
     }
 

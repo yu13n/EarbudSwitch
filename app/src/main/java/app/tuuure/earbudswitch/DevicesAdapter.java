@@ -220,7 +220,7 @@ public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHold
                 if (device.getName() == null || device.getName().isEmpty()) {
                     continue;
                 }
-                if (device.getBluetoothClass().hasService(BluetoothClass.Service.AUDIO)) {
+                if(device.getBluetoothClass().getMajorDeviceClass() == BluetoothClass.Device.Major.AUDIO_VIDEO){
                     bondedDevices.add(new RecycleItem(device));
                 }
             }

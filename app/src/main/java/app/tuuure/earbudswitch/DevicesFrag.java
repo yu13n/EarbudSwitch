@@ -17,6 +17,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.ParcelUuid;
+import android.util.ArrayMap;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -34,10 +35,12 @@ import com.microsoft.appcenter.analytics.Analytics;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
-import static app.tuuure.earbudswitch.ConvertUtils.bytesToLong;
-import static app.tuuure.earbudswitch.ConvertUtils.mur32b;
+import app.tuuure.earbudswitch.Utils.ProfileManager;
+
+import static app.tuuure.earbudswitch.Utils.ConvertUtils.md5code32;
 
 public class DevicesFrag extends Fragment {
     private final static String TAG = "FragDevice";
@@ -46,7 +49,7 @@ public class DevicesFrag extends Fragment {
     private DevicesAdapter rvAdapter;
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothLeScanner bluetoothLeScanner;
-    private HashMap<Long, String> boundeDevices = new HashMap<>(10);
+    private ArrayMap<UUID,String> boundeDevices = new ArrayMap<>(10);
     private BleClient client;
 
     private BroadcastReceiver receiver = new BroadcastReceiver() {
@@ -195,7 +198,7 @@ public class DevicesFrag extends Fragment {
                 ArrayList<RecycleItem> devices = rvAdapter.getData();
                 if (devices != null && !devices.isEmpty()) {
                     for (RecycleItem item : devices) {
-                        boundeDevices.put(bytesToLong(mur32b(item.budsAddress)), item.budsAddress);
+                        boundeDevices.put(md5code32(item.budsAddress), item.budsAddress);
                     }
                     if (bluetoothAdapter.isEnabled() && mContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                         scanBle();
@@ -263,31 +266,25 @@ public class DevicesFrag extends Fragment {
             if (serviceData == null || serviceData.isEmpty()) {
                 return;
             }
-
             for (ParcelUuid uuid : serviceData) {
-                long bits = uuid.getUuid().getMostSignificantBits();
-                if (!boundeDevices.containsKey(bits)) {
-                    bits = uuid.getUuid().getLeastSignificantBits();
-                    if (!boundeDevices.containsKey(bits)) {
-                        continue;
-                    }
-                }
-                String budsAddress = boundeDevices.get(bits);
-                BluetoothDevice target = bluetoothAdapter.getRemoteDevice(budsAddress);
-                if (target != null) {
-                    String budsName = target.getName();
-                    if (budsName != null) {
-                        RecycleItem item = new RecycleItem(budsName, budsAddress, server.getAddress(), System.currentTimeMillis());
-                        rvAdapter.setConnectable(item);
+                if (boundeDevices.containsKey(uuid.getUuid())) {
+                    String budsAddress = boundeDevices.get(uuid.getUuid());
+                    BluetoothDevice target = bluetoothAdapter.getRemoteDevice(budsAddress);
+                    if (target != null) {
+                        String budsName = target.getName();
+                        if (budsName != null) {
+                            RecycleItem item = new RecycleItem(budsName, budsAddress, server.getAddress(), System.currentTimeMillis());
+                            rvAdapter.setConnectable(item);
 
-                        Log.d(TAG, String.format("Device %1$s discoverd, Server %2$s", budsName, server.getAddress()));
-                        if (isFirstFind) {
-                            long time = System.currentTimeMillis() - startTime;
-                            //Map<String, String> properties = new HashMap<>();
-                            //properties.put("Time", String.valueOf(time));
-                            Log.d(TAG, String.format("After %1$d ms", time));
-                            //Analytics.trackEvent("ScanTime", properties);
-                            isFirstFind = false;
+                            Log.d(TAG, String.format("Device %1$s discoverd, Server %2$s", budsName, server.getAddress()));
+                            if (isFirstFind) {
+                                long time = System.currentTimeMillis() - startTime;
+                                Map<String, String> properties = new HashMap<>();
+                                properties.put("Time", String.valueOf(time));
+                                Log.d(TAG, String.format("After %1$d ms", time));
+                                Analytics.trackEvent("ScanTime", properties);
+                                isFirstFind = false;
+                            }
                         }
                     }
                 }
@@ -307,36 +304,18 @@ public class DevicesFrag extends Fragment {
         }
     };
 
-    private static final ParcelUuid head = new ParcelUuid(UUID.fromString("FFFFFFFF-FFFF-FFFF-0000-000000000000"));
-    private static final ParcelUuid tail = new ParcelUuid(UUID.fromString("00000000-0000-0000-FFFF-FFFFFFFFFFFF"));
-
     private void scanBle() {
         bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
 
-        List<ScanFilter> filters = new ArrayList<>(10);
+        ArrayList<ScanFilter> filters = new ArrayList<>(boundeDevices.size());
 
         if (boundeDevices.isEmpty()) {
             return;
         }
 
-        for (long bits : boundeDevices.keySet()) {
-
-            ScanFilter filter;
-
-            ParcelUuid parcelUuid = new ParcelUuid(new UUID(bits, bits));
-
-            filter = new ScanFilter.Builder()
-                    .setServiceUuid(parcelUuid)
-                    .build();
-            filters.add(filter);
-
-            filter = new ScanFilter.Builder()
-                    .setServiceUuid(parcelUuid, head)
-                    .build();
-            filters.add(filter);
-
-            filter = new ScanFilter.Builder()
-                    .setServiceUuid(parcelUuid, tail)
+        for (UUID uuid : boundeDevices.keySet()) {
+            ScanFilter filter = new ScanFilter.Builder()
+                    .setServiceUuid(new ParcelUuid(uuid))
                     .build();
             filters.add(filter);
         }

@@ -24,6 +24,8 @@ import androidx.core.app.NotificationCompat;
 
 import com.microsoft.appcenter.analytics.Analytics;
 
+import app.tuuure.earbudswitch.Utils.TwsUtils;
+
 public class EarbudService extends Service {
     private static final String PACKNAME = "app.tuuure.earbudswitch";
     static final String CHANNEL_ID = PACKNAME + ".EarbudService";

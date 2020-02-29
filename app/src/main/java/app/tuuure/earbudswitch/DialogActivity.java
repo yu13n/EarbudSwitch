@@ -29,9 +29,9 @@ import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
-import com.microsoft.appcenter.AppCenter;
 import com.microsoft.appcenter.analytics.Analytics;
-import com.microsoft.appcenter.crashes.Crashes;
+
+import app.tuuure.earbudswitch.Utils.SharedPreferencesUtils;
 
 public class DialogActivity extends AppCompatActivity {
     final static String TAG = "EBSDialog";
@@ -55,12 +55,17 @@ public class DialogActivity extends AppCompatActivity {
         setContentView(R.layout.activity_dialog);
 
         Toolbar toolbar = findViewById(R.id.tb_dialog);
-
+        toolbar.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                SharedPreferencesUtils.getInstance().clearTWS();
+                Toast.makeText(DialogActivity.this, "TWS Device Record Clear", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+        });
         setSupportActionBar(toolbar);
 
         getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-
-        AppCenter.start(getApplication(), "", Analytics.class, Crashes.class);
 
         viewPager = findViewById(R.id.viewpage);
         PaperAdapter paperAdapter = new PaperAdapter(this);

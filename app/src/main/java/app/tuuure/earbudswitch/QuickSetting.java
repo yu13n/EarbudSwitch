@@ -16,7 +16,7 @@ import android.service.quicksettings.TileService;
 import java.lang.reflect.Method;
 import java.util.List;
 
-import static app.tuuure.earbudswitch.ProfileManager.getConnectionState;
+import static app.tuuure.earbudswitch.Utils.ProfileManager.getConnectionState;
 
 public class QuickSetting extends TileService {
     static final String TAG = "QuickSetting";

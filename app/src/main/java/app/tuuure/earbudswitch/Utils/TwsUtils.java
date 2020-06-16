@@ -13,6 +13,8 @@ import org.json.JSONException;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Set;
 
 import static java.lang.Class.forName;
 
@@ -20,6 +22,10 @@ public class TwsUtils {
 
     public interface Callback {
         void notice();
+    }
+
+    public static void isTWS(Context context, Set<BluetoothDevice> devices, final Callback callBack) {
+        isTWS(context, getAddress(devices), callBack);
     }
 
     public static void isTWS(Context context, final String[] macAddress, final Callback callBack) {
@@ -101,6 +107,10 @@ public class TwsUtils {
         bluetoothAdapter.getProfileProxy(context, proxyListener, BluetoothProfile.A2DP);
     }
 
+    public static String getTWS(BluetoothDevice device) {
+        return getTWS(device.getAddress());
+    }
+
     public static String getTWS(String macAddress) {
         String raw = SharedPreferencesUtils.getInstance().getTWS();
         if (raw.contains(macAddress)) {
@@ -122,21 +132,42 @@ public class TwsUtils {
             }
         }
         //目标设备不存在于缓存中，寻找名字类似的设备
-        String origin = macAddress.toLowerCase().replaceAll("[lr ]", "");
+        String origin = BluetoothAdapter.getDefaultAdapter()
+                .getRemoteDevice(macAddress)
+                .getName()
+                .toLowerCase().replaceAll("[lr\\W]", "");
         for (BluetoothDevice device : BluetoothAdapter.getDefaultAdapter().getBondedDevices()) {
             if (device.getBluetoothClass().getMajorDeviceClass() != BluetoothClass.Device.Major.AUDIO_VIDEO
                     || device.getName() == null || device.getName().isEmpty())
                 continue;
             if (!device.getAddress().equals(macAddress)) {
-                if (origin.equals(device.getName().toLowerCase().replaceAll("[lr ]", "")))
+                if (origin.equals(device.getName().toLowerCase().replaceAll("[lr\\W]", "")))
                     return device.getAddress();
             }
         }
         return "";
     }
 
+    public static boolean isTWSContain(BluetoothDevice device) {
+        return isTWSContain(device.getAddress());
+    }
+
     public static boolean isTWSContain(String macAddress) {
         return SharedPreferencesUtils.getInstance().getTWS().contains(macAddress);
+    }
+
+    private static String[] getAddress(Set<BluetoothDevice> devices) {
+        ArrayList<String> array = new ArrayList<>(2);
+        for (BluetoothDevice device : devices) {
+            array.add(device.getAddress());
+        }
+        String[] result = new String[array.size()];
+        array.toArray(result);
+        return result;
+    }
+
+    public static void putTWS(Set<BluetoothDevice> devices) {
+        putTWS(getAddress(devices));
     }
 
     public static void putTWS(String[] macAddress) {

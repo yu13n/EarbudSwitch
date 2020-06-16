@@ -14,11 +14,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.Build;
 import android.util.Log;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.UUID;
 
 import app.tuuure.earbudswitch.Utils.ProfileManager;
@@ -26,7 +23,6 @@ import app.tuuure.earbudswitch.Utils.SharedPreferencesUtils;
 import app.tuuure.earbudswitch.Utils.TwsUtils;
 
 import static app.tuuure.earbudswitch.Utils.ConvertUtils.*;
-import static java.lang.Class.forName;
 
 class BleClient {
     private static final String TAG = "BleClient";
@@ -82,7 +78,7 @@ class BleClient {
             super.onCharacteristicRead(gatt, characteristic, status);
             UUID saltUUID = bytesToUUID(characteristic.getValue());
 
-            byte[] authCode = hmacMD5(saltUUID.toString(), authKey);
+            byte[] authCode = hmacMD5(uuidToBytes(saltUUID), authKey);
             characteristic.setValue(authCode);
             bluetoothGatt.writeCharacteristic(characteristic);
         }
@@ -91,7 +87,6 @@ class BleClient {
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             Log.d(TAG, "Characteristic Writed");
             super.onCharacteristicWrite(gatt, characteristic, status);
-            ProfileManager.disconnect(mContext, null); //Disconnect any connected device
             if (aggressiveMode)
                 connectDevice();
         }
@@ -116,7 +111,7 @@ class BleClient {
                     TwsUtils.isTWS(mContext, new String[]{bluetoothDevice.getAddress()}, new TwsUtils.Callback() {
                         @Override
                         public void notice() {
-                            String macAddress = TwsUtils.getTWS(bluetoothDevice.getAddress());
+                            String macAddress = TwsUtils.getTWS(bluetoothDevice);
                             if (!macAddress.isEmpty()) {
                                 ProfileManager.connect(mContext, bluetoothAdapter.getRemoteDevice(macAddress));
                             }
@@ -130,10 +125,10 @@ class BleClient {
 
     private void connectDevice() {
         if (bluetoothAdapter.isMultipleAdvertisementSupported()) {
-            // 可能是TWS+
-            if (TwsUtils.isTWSContain(bluetoothDevice.getAddress())) {
-                //目标设备是TWS+设备
-                String macAddress = TwsUtils.getTWS(bluetoothDevice.getAddress());
+            // 设备支持TWS+
+            if (TwsUtils.isTWSContain(bluetoothDevice)) {
+                //目标设备是已知TWS+设备
+                String macAddress = TwsUtils.getTWS(bluetoothDevice);
                 if (!macAddress.isEmpty()) {
                     ProfileManager.connect(mContext, bluetoothAdapter.getRemoteDevice(macAddress));
                 }

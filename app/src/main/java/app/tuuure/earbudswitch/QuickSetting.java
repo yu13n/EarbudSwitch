@@ -13,11 +13,14 @@ import android.os.Build;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 
+import androidx.annotation.RequiresApi;
+
 import java.lang.reflect.Method;
 import java.util.List;
 
 import static app.tuuure.earbudswitch.Utils.ProfileManager.getConnectionState;
 
+@RequiresApi(api = Build.VERSION_CODES.N)
 public class QuickSetting extends TileService {
     static final String TAG = "QuickSetting";
     static final int BATTERY_LEVEL_UNKNOWN = -1;

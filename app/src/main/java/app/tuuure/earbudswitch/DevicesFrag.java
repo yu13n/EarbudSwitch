@@ -40,7 +40,7 @@ import java.util.UUID;
 
 import app.tuuure.earbudswitch.Utils.ProfileManager;
 
-import static app.tuuure.earbudswitch.Utils.ConvertUtils.md5code32;
+import static app.tuuure.earbudswitch.Utils.ConvertUtils.*;
 
 public class DevicesFrag extends Fragment {
     private final static String TAG = "FragDevice";
@@ -49,7 +49,7 @@ public class DevicesFrag extends Fragment {
     private DevicesAdapter rvAdapter;
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothLeScanner bluetoothLeScanner;
-    private ArrayMap<UUID,String> boundeDevices = new ArrayMap<>(10);
+    private ArrayMap<UUID, String> boundeDevices = new ArrayMap<>(10);
     private BleClient client;
 
     private BroadcastReceiver receiver = new BroadcastReceiver() {
@@ -192,21 +192,29 @@ public class DevicesFrag extends Fragment {
 
         rvAdapter.devicesReset(bluetoothAdapter.getBondedDevices());
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                ArrayList<RecycleItem> devices = rvAdapter.getData();
-                if (devices != null && !devices.isEmpty()) {
-                    for (RecycleItem item : devices) {
-                        boundeDevices.put(md5code32(item.budsAddress), item.budsAddress);
-                    }
-                    if (bluetoothAdapter.isEnabled() && mContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                        scanBle();
-                    }
-                }
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                ArrayList<RecycleItem> devices = rvAdapter.getData();
+//                if (devices != null && !devices.isEmpty()) {
+//                    for (RecycleItem item : devices) {
+//                        boundeDevices.put(md5code32(item.budsAddress), item.budsAddress);
+//                    }
+//                    if (bluetoothAdapter.isEnabled() && mContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+//                        scanBle();
+//                    }
+//                }
+//            }
+//        }).start();
+        ArrayList<RecycleItem> devices = rvAdapter.getData();
+        if (devices != null && !devices.isEmpty()) {
+            for (RecycleItem item : devices) {
+                boundeDevices.put(md5code32(item.budsAddress), item.budsAddress);
             }
-        }).start();
-
+            if (bluetoothAdapter.isEnabled() && mContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                scanBle();
+            }
+        }
         bluetoothAdapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.A2DP);
         bluetoothAdapter.getProfileProxy(mContext, proxyListener, BluetoothProfile.HEADSET);
 
@@ -261,12 +269,17 @@ public class DevicesFrag extends Fragment {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             BluetoothDevice server = result.getDevice();
-            List<ParcelUuid> serviceData = result.getScanRecord().getServiceUuids();
+            List<ParcelUuid> parcelUuids = result.getScanRecord().getServiceUuids();
+            byte[] data = result.getScanRecord().getManufacturerSpecificData(0xEB55);
+            if (data != null) {
+                parcelUuids = new ArrayList<>(1);
+                parcelUuids.add(new ParcelUuid(bytesToUUID(data)));
+            }
 
-            if (serviceData == null || serviceData.isEmpty()) {
+            if (parcelUuids == null || parcelUuids.isEmpty()) {
                 return;
             }
-            for (ParcelUuid uuid : serviceData) {
+            for (ParcelUuid uuid : parcelUuids) {
                 if (boundeDevices.containsKey(uuid.getUuid())) {
                     String budsAddress = boundeDevices.get(uuid.getUuid());
                     BluetoothDevice target = bluetoothAdapter.getRemoteDevice(budsAddress);
@@ -318,6 +331,11 @@ public class DevicesFrag extends Fragment {
                     .setServiceUuid(new ParcelUuid(uuid))
                     .build();
             filters.add(filter);
+            byte[] data = uuidToBytes(uuid);
+            ScanFilter filter2 = new ScanFilter.Builder()
+                    .setManufacturerData(0xEB55, data)
+                    .build();
+            filters.add(filter2);
         }
 
         ScanSettings scanSettings = new ScanSettings.Builder()

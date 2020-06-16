@@ -189,7 +189,9 @@ public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHold
             RecycleItem tempItem = bondedDevices.get(i);
             if (tempItem.budsAddress.equals(item.budsAddress)) {
                 bondedDevices.set(i, item);
-                notifyItemChanged(i);
+                if (tempItem.serverAddress == null) {
+                    notifyItemChanged(i);
+                }
                 break;
             }
         }
@@ -220,7 +222,7 @@ public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHold
                 if (device.getName() == null || device.getName().isEmpty()) {
                     continue;
                 }
-                if(device.getBluetoothClass().getMajorDeviceClass() == BluetoothClass.Device.Major.AUDIO_VIDEO){
+                if (device.getBluetoothClass().getMajorDeviceClass() == BluetoothClass.Device.Major.AUDIO_VIDEO) {
                     bondedDevices.add(new RecycleItem(device));
                 }
             }

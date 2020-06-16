@@ -3,10 +3,7 @@ package app.tuuure.earbudswitch.Utils;
 import android.content.SharedPreferences;
 
 import org.json.JSONArray;
-import org.json.JSONException;
-
 import app.tuuure.earbudswitch.CusApplication;
-
 import static android.content.Context.MODE_PRIVATE;
 
 public class SharedPreferencesUtils {
@@ -59,11 +56,11 @@ public class SharedPreferencesUtils {
 
     private static final String TWS_NAME = "twsp";
 
-    public String getTWS() {
+    String getTWS() {
         return sp.getString(TWS_NAME, "");
     }
 
-    public void putTWS(JSONArray jsonArray) {
+    void putTWS(JSONArray jsonArray) {
         editor.putString(TWS_NAME, jsonArray.toString());
         editor.commit();
     }

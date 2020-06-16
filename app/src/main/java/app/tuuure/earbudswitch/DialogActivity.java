@@ -89,7 +89,8 @@ public class DialogActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(TAG, "onResume");
+
+        // 获取系统主题配色
         nightMode = Configuration.UI_MODE_NIGHT_YES == (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK);
         TypedArray array = obtainStyledAttributes(android.R.style.Theme_DeviceDefault, new int[]{
                 android.R.attr.colorAccent,

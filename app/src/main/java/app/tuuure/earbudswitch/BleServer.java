@@ -9,13 +9,13 @@ import android.bluetooth.BluetoothGattServer;
 import android.bluetooth.BluetoothGattServerCallback;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
-import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.AdvertiseCallback;
 import android.bluetooth.le.AdvertiseData;
 import android.bluetooth.le.AdvertiseSettings;
 import android.bluetooth.le.BluetoothLeAdvertiser;
 import android.content.Context;
 import android.os.ParcelUuid;
+import android.util.ArraySet;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -23,6 +23,7 @@ import com.microsoft.appcenter.analytics.Analytics;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -41,7 +42,7 @@ class BleServer {
     private BluetoothAdapter bluetoothAdapter;
     private UUID saltUUID;
     private ArrayList<AdvertiseCallback> callbacks = new ArrayList<>(2);
-    private ArrayList<BluetoothDevice> devices = new ArrayList<>(2);
+    private Set<BluetoothDevice> devices = new ArraySet<>(2);
     private byte[] authCode;
     private BluetoothLeAdvertiser bluetoothLeAdvertiser = null;
     private BluetoothGattServer gattServer;
@@ -53,7 +54,7 @@ class BleServer {
         saltUUID = UUID.randomUUID();
         Log.d(TAG, "saltUUID: " + saltUUID.toString());
         String authKey = SharedPreferencesUtils.getInstance().getKey();
-        authCode = hmacMD5(saltUUID.toString(), authKey);
+        authCode = hmacMD5(uuidToBytes(saltUUID), authKey);
         openGattServer();
     }
 
@@ -62,24 +63,16 @@ class BleServer {
         gattServer = bluetoothManager.openGattServer(mContext, gattServerCallback);
     }
 
-    String[] getDevicesAddress() {
-        ArrayList<String> result = new ArrayList<>(2);
-        for (BluetoothDevice device : devices) {
-            result.add(device.getAddress());
-        }
-        return (String[]) result.toArray();
-    }
-
     private ConcurrentLinkedQueue<BluetoothDevice> queue = new ConcurrentLinkedQueue<>();
 
     void addDevice(BluetoothDevice device) {
         devices.add(device);
 
         if (devices.size() == 2) {
-            TwsUtils.isTWS(mContext, getDevicesAddress(), new TwsUtils.Callback() {
+            TwsUtils.isTWS(mContext, devices, new TwsUtils.Callback() {
                 @Override
                 public void notice() {
-                    TwsUtils.putTWS(getDevicesAddress());
+                    TwsUtils.putTWS(devices);
                 }
             });
         }
@@ -114,7 +107,7 @@ class BleServer {
                 .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER)
                 .setConnectable(true)
                 .setTimeout(0)
-                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_ULTRA_LOW)
+                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_LOW)
                 .build();
 
         if (!devices.isEmpty()) {
@@ -129,6 +122,7 @@ class BleServer {
                         .setIncludeDeviceName(false)
                         .setIncludeTxPowerLevel(false)
                         .addServiceUuid(new ParcelUuid(md5code32(device.getAddress())))
+                        //.addManufacturerData(0xeb55,)
                         .build();
 
                 AdvertiseCallback advertiseCallback = new AdvertiseCallback() {

@@ -25,13 +25,13 @@ public class ConvertUtils {
         return bytesToUUID(hash);
     }
 
-    public static byte[] hmacMD5(String content, String key) {
+    public static byte[] hmacMD5(byte[] content, String key) {
         byte[] digest;
         try {
             SecretKeySpec sks = new SecretKeySpec(key.getBytes(), "HmacMD5");
             Mac mac = Mac.getInstance("HmacMD5");
             mac.init(sks);
-            digest = mac.doFinal(content.getBytes(StandardCharsets.UTF_8));
+            digest = mac.doFinal(content);
         } catch (NoSuchAlgorithmException e) {
             Log.e(TAG, "NoSuchAlgorithmException");
             digest = null;
@@ -47,6 +47,19 @@ public class ConvertUtils {
         buffer.putLong(uuid.getMostSignificantBits());
         buffer.putLong(uuid.getLeastSignificantBits());
         return buffer.array();
+    }
+    public static String bytes2HexString(byte[] array) {
+        StringBuilder builder = new StringBuilder();
+
+        for (byte b : array) {
+            String hex = Integer.toHexString(b & 0xFF);
+            if (hex.length() == 1) {
+                hex = '0' + hex;
+            }
+            builder.append(hex);
+        }
+
+        return builder.toString().toUpperCase();
     }
 
     public static UUID bytesToUUID(byte[] inputByteArray) {

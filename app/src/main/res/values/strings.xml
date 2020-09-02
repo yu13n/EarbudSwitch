@@ -1,0 +1,47 @@
+<resources>
+    <string name="app_name">EBS</string>
+    <string name="app_title">EarbudSwitch</string>
+    <string name="text_auth_code">Auth Code</string>
+
+    <string name="text_qr_code">QRCode</string>
+
+    <string name="notification_blank_content">Foreground Service Running</string>
+    <string name="notification_scan_content">EBS Scanning for %1$s</string>
+    <string name="notification_advertise_content">%1$s Advertising</string>
+    <string name="filter_mode_allow">Allow Mode</string>
+    <string name="filter_mode_block">Block Mode</string>
+
+    <string name="toast_camera_permission_denied">To scan QRCode, please grant the Camera Permission</string>
+
+    <string name="toast_same_key">Same Key Detected</string>
+    <string name="switch_lan_enable">Use LAN only when WIFI is available</string>
+    <string name="switch_crashlytics">Upload crash</string>
+
+
+    <string name="bluetooth_off">Unable to get paired Earbuds\nClick to Turn On Bluetooth</string>
+    <string name="toast_bth_on">Turning on Bluetooth</string>
+    <string name="action_about">About</string>
+    <string name="welcome_button_next">Next</string>
+
+    <string name="test_start_service">Start</string>
+    <string name="test_choose">Choose</string>
+    <string name="test_scan">Scan</string>
+    <string name="test_connect_gatt">Connect_Gatt</string>
+    <string name="test_write">Write</string>
+    <string name="test_notified">Notified</string>
+    <string name="test_connect">Connect</string>
+    <string name="test_advertise">Advertise</string>
+    <string name="test_written">Written</string>
+    <string name="test_notify">Notify</string>
+    <string name="test_disconnect">Disconnect</string>
+    <string name="test_shutdown">Shutdown</string>
+
+    <string name="intro_introduction">Switch your bluetooth earbuds connection</string>
+    <string name="intro_permission">Permission</string>
+    <string name="intro_location_permission">Location Permission</string>
+    <string name="text_location_permission">Required to start the BLE scan</string>
+    <string name="intro_camera_permission">Camera Permission</string>
+    <string name="text_camera_permission">Required to scan QRCode</string>
+    <string name="snack_permission">Please grant all these permissions</string>
+
+</resources>

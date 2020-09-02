@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="filterModeArray">
+        <item>@string/filter_mode_block</item>
+        <item>@string/filter_mode_allow</item>
+    </string-array>
+</resources>

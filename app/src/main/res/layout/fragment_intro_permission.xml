@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guide_line_top"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.3" />
+
+    <TextView
+        android:id="@+id/intro_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-black"
+        android:text="@string/intro_permission"
+        android:textSize="36sp"
+        app:layout_constraintBottom_toTopOf="@id/guide_line_top"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <androidx.appcompat.widget.SwitchCompat
+        android:id="@+id/intro_permission_location"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="32dp"
+        android:fontFamily="sans-serif-black"
+        android:text="@string/intro_location_permission"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toTopOf="@id/intro_explanation_location"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/guide_line_top"
+        app:layout_constraintVertical_chainStyle="packed" />
+
+    <TextView
+        android:id="@+id/intro_explanation_location"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-medium"
+        android:gravity="center"
+        android:text="@string/text_location_permission"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toTopOf="@id/intro_permission_camera"
+        app:layout_constraintStart_toStartOf="@id/intro_permission_location"
+        app:layout_constraintTop_toBottomOf="@id/intro_permission_location" />
+
+    <androidx.appcompat.widget.SwitchCompat
+        android:id="@+id/intro_permission_camera"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginTop="12dp"
+        android:fontFamily="sans-serif-black"
+        android:text="@string/intro_camera_permission"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toTopOf="@id/intro_explanation_camera"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/intro_explanation_location" />
+
+    <TextView
+        android:id="@+id/intro_explanation_camera"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-medium"
+        android:gravity="center"
+        android:text="@string/text_camera_permission"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toBottomOf="@id/guide_line_bottom"
+        app:layout_constraintStart_toStartOf="@id/intro_permission_camera"
+        app:layout_constraintTop_toBottomOf="@id/intro_permission_camera" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guide_line_bottom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.75" />
+
+    <Button
+        android:id="@+id/buttonIntroNext"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton.Icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/welcome_button_next"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/guide_line_bottom" />
+</androidx.constraintlayout.widget.ConstraintLayout>

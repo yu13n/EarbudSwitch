@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MotionScene xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:motion="http://schemas.android.com/tools">
+
+    <Transition
+        app:constraintSetEnd="@+id/end"
+        app:constraintSetStart="@+id/start"
+        motion:duration="1000"
+        motion:motionInterpolator="linear">
+        <OnSwipe app:touchAnchorId="@id/image_qr_code" />
+    </Transition>
+
+    <ConstraintSet android:id="@+id/start">
+        <Constraint
+            android:id="@id/toolbar"
+            android:layout_width="0dp"
+            android:layout_height="?attr/actionBarSize"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:title="@string/app_title" />
+
+        <Constraint
+            android:id="@id/container_device"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="6dp"
+            android:alpha="1.0"
+            android:visibility="visible"
+            app:cardCornerRadius="8dp"
+            app:layout_constraintBottom_toTopOf="@id/container_settings"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/toolbar"
+            app:layout_constraintVertical_weight="4" />
+
+        <Constraint
+            android:id="@id/image_qr_code"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginEnd="16dp"
+            android:adjustViewBounds="true"
+            android:scaleType="fitXY"
+            android:translationZ="2dp"
+            app:layout_constraintBottom_toTopOf="@id/sw_lan"
+            app:layout_constraintEnd_toEndOf="@id/container_settings"
+            app:layout_constraintStart_toStartOf="@id/container_settings"
+            app:layout_constraintTop_toTopOf="@id/container_settings" />
+
+        <Constraint
+            android:id="@id/text_key"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="0.0"
+            android:visibility="invisible"
+            app:layout_constraintEnd_toEndOf="@id/image_qr_code"
+            app:layout_constraintStart_toStartOf="@id/image_qr_code"
+            app:layout_constraintTop_toBottomOf="@id/image_qr_code" />
+
+        <Constraint
+            android:id="@id/buttonCamera"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="0.0"
+            android:rotation="-180"
+            android:visibility="invisible"
+            app:backgroundTint="@color/fab_background"
+            app:fabCustomSize="60dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/buttonRefresh"
+            app:layout_constraintStart_toStartOf="@id/image_qr_code"
+            app:layout_constraintTop_toBottomOf="@id/image_qr_code"
+            app:maxImageSize="48dp"
+            app:srcCompat="@drawable/ic_camera" />
+
+        <Constraint
+            android:id="@id/buttonRefresh"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:rotation="180"
+            android:visibility="invisible"
+            app:backgroundTint="@color/fab_background"
+            app:fabCustomSize="60dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="@id/image_qr_code"
+            app:layout_constraintStart_toEndOf="@id/buttonCamera"
+            app:layout_constraintTop_toBottomOf="@id/image_qr_code"
+            app:maxImageSize="30dp"
+            app:srcCompat="@drawable/ic_refresh_24" />
+
+        <Constraint
+            android:id="@id/container_settings"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="12dp"
+            android:alpha="1.0"
+            android:visibility="visible"
+            app:cardCornerRadius="8dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/container_device"
+            app:layout_constraintVertical_weight="3" />
+
+        <Constraint
+            android:id="@id/sw_lan"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:alpha="1.0"
+            android:text="@string/switch_lan_enable"
+            android:translationZ="2dp"
+            android:visibility="visible"
+            app:layout_constraintBottom_toTopOf="@id/sw_crashlytics"
+            app:layout_constraintEnd_toEndOf="@id/container_settings"
+            app:layout_constraintStart_toStartOf="@id/container_settings"
+            app:layout_constraintTop_toBottomOf="@id/image_qr_code" />
+
+        <Constraint
+            android:id="@id/sw_crashlytics"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:alpha="1.0"
+            android:text="@string/switch_crashlytics"
+            android:translationZ="2dp"
+            android:visibility="visible"
+            app:layout_constraintBottom_toBottomOf="@id/container_settings"
+            app:layout_constraintEnd_toEndOf="@id/container_settings"
+            app:layout_constraintStart_toStartOf="@id/container_settings"
+            app:layout_constraintTop_toBottomOf="@id/sw_lan" />
+    </ConstraintSet>
+
+    <ConstraintSet android:id="@+id/end">
+        <Constraint
+            android:id="@id/toolbar"
+            android:layout_width="0dp"
+            android:layout_height="?attr/actionBarSize"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:title="@string/app_title" />
+
+        <Constraint
+            android:id="@id/container_device"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="6dp"
+            android:alpha="0.0"
+            android:visibility="invisible"
+            app:cardCornerRadius="8dp"
+            app:layout_constraintBottom_toTopOf="@id/container_settings"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/toolbar"
+            app:layout_constraintVertical_weight="4" />
+
+        <Constraint
+            android:id="@id/image_qr_code"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="32dp"
+            android:layout_marginEnd="32dp"
+            android:adjustViewBounds="true"
+            android:maxWidth="300dp"
+            android:scaleType="fitXY"
+            android:translationZ="2dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Constraint
+            android:id="@id/text_key"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="1.0"
+            android:visibility="visible"
+            app:layout_constraintEnd_toEndOf="@id/image_qr_code"
+            app:layout_constraintStart_toStartOf="@id/image_qr_code"
+            app:layout_constraintTop_toBottomOf="@id/image_qr_code" />
+
+        <Constraint
+            android:id="@id/buttonCamera"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="1.0"
+            android:rotation="-360"
+            android:visibility="visible"
+            app:backgroundTint="@color/fab_background"
+            app:fabCustomSize="60dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/buttonRefresh"
+            app:layout_constraintStart_toStartOf="@id/image_qr_code"
+            app:layout_constraintTop_toBottomOf="@id/image_qr_code"
+            app:maxImageSize="48dp"
+            app:srcCompat="@drawable/ic_camera" />
+
+        <Constraint
+            android:id="@id/buttonRefresh"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="1.0"
+            android:rotation="360"
+            android:visibility="visible"
+            app:backgroundTint="@color/fab_background"
+            app:fabCustomSize="60dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="@id/image_qr_code"
+            app:layout_constraintStart_toEndOf="@id/buttonCamera"
+            app:layout_constraintTop_toBottomOf="@id/image_qr_code"
+            app:maxImageSize="30dp"
+            app:srcCompat="@drawable/ic_refresh_24" />
+
+        <Constraint
+            android:id="@id/container_settings"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="12dp"
+            android:alpha="0.0"
+            android:visibility="invisible"
+            app:cardCornerRadius="8dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/container_device"
+            app:layout_constraintVertical_weight="3" />
+
+        <Constraint
+            android:id="@id/sw_lan"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:alpha="0.0"
+            android:text="@string/switch_lan_enable"
+            android:translationZ="2dp"
+            android:visibility="invisible"
+            app:layout_constraintBottom_toTopOf="@id/sw_crashlytics"
+            app:layout_constraintEnd_toEndOf="@id/container_settings"
+            app:layout_constraintStart_toStartOf="@id/container_settings"
+            app:layout_constraintTop_toBottomOf="@id/image_qr_code" />
+
+        <Constraint
+            android:id="@id/sw_crashlytics"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:alpha="0.0"
+            android:text="@string/switch_crashlytics"
+            android:translationZ="2dp"
+            android:visibility="invisible"
+            app:layout_constraintBottom_toBottomOf="@id/container_settings"
+            app:layout_constraintEnd_toEndOf="@id/container_settings"
+            app:layout_constraintStart_toStartOf="@id/container_settings"
+            app:layout_constraintTop_toBottomOf="@id/sw_lan" />
+    </ConstraintSet>
+
+</MotionScene>

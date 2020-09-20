@@ -18,11 +18,11 @@ import android.widget.AdapterView.OnItemSelectedListener
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
-import app.tuuure.earbudswitch.KeyQRCode
-import app.tuuure.earbudswitch.KeyQRCode.Companion.createQRCode
-import app.tuuure.earbudswitch.ListAdapter
+import app.tuuure.earbudswitch.utils.KeyQRCode
+import app.tuuure.earbudswitch.utils.KeyQRCode.Companion.createQRCode
+import app.tuuure.earbudswitch.recyclerList.ListAdapter
 import app.tuuure.earbudswitch.R
-import app.tuuure.earbudswitch.SPreferences
+import app.tuuure.earbudswitch.utils.SPreferences
 import app.tuuure.earbudswitch.earbuds.EarbudManager.Companion.getAudioDevices
 import com.king.zxing.CaptureActivity
 import com.king.zxing.Intents

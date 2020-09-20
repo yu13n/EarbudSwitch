@@ -11,7 +11,7 @@ import android.os.Build
 import android.util.Log
 import app.tuuure.earbudswitch.EventTag
 import app.tuuure.earbudswitch.ParamTarget
-import app.tuuure.earbudswitch.SPreferences
+import app.tuuure.earbudswitch.utils.SPreferences
 import com.drake.channel.sendEvent
 
 class EarbudReceiver : BroadcastReceiver() {

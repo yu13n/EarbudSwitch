@@ -12,12 +12,13 @@ import app.tuuure.earbudswitch.*
 import app.tuuure.earbudswitch.utils.CryptoConvert.Companion.bytesToUUID
 import app.tuuure.earbudswitch.utils.CryptoConvert.Companion.md5code32
 import app.tuuure.earbudswitch.utils.CryptoConvert.Companion.tOTPChecker
-import app.tuuure.earbudswitch.utils.SPreferences
+import app.tuuure.earbudswitch.utils.Preferences
 import com.drake.channel.AndroidScope
 import com.drake.channel.receiveEvent
 import com.drake.channel.sendEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
 import java.util.*
@@ -38,7 +39,7 @@ class BleAdvertiser(private val context: Context, var isBind: Boolean) {
 
     init {
         CoroutineScope(Dispatchers.IO).launch {
-            key = SPreferences.getKey()
+            key = Preferences.getKey()
         }
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
         bluetoothLeAdvertiser = bluetoothAdapter.bluetoothLeAdvertiser;

@@ -11,7 +11,7 @@ import android.os.Build
 import android.util.Log
 import app.tuuure.earbudswitch.EventTag
 import app.tuuure.earbudswitch.ParamTarget
-import app.tuuure.earbudswitch.utils.SPreferences
+import app.tuuure.earbudswitch.utils.Preferences
 import com.drake.channel.sendEvent
 
 class EarbudReceiver : BroadcastReceiver() {
@@ -33,7 +33,7 @@ class EarbudReceiver : BroadcastReceiver() {
             val state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1)
             when (state) {
                 BluetoothA2dp.STATE_CONNECTED -> {
-                    if (!SPreferences.checkRestricted(device.address)) {
+                    if (!Preferences.checkRestricted(device.address)) {
                         startService(context, device, state)
                         Log.d("TAG","startService")
                     }

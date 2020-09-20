@@ -6,7 +6,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.os.Build
-import app.tuuure.earbudswitch.utils.SPreferences
+import app.tuuure.earbudswitch.utils.Preferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -108,7 +108,7 @@ class TwsManager(context: Context) {
     ): Collection<BluetoothDevice> = devices.filter { array.contains(it.address) }
 
     fun getTwsDevice(device: BluetoothDevice): BluetoothDevice? {
-        val array: JSONArray = SPreferences.getTwsDevices()
+        val array: JSONArray = Preferences.getTwsDevices()
         if (isContains(array.toString(), setOf(device)).isNotEmpty()) return null
 
         var address: String? = null
@@ -136,7 +136,7 @@ class TwsManager(context: Context) {
 
     fun addDevices(devices: Collection<BluetoothDevice>) {
         CoroutineScope(Dispatchers.Default).launch {
-            val array: JSONArray = SPreferences.getTwsDevices()
+            val array: JSONArray = Preferences.getTwsDevices()
             if ((devices.size == 2) and (isContains(array.toString(), devices).size == 2)) {
                 val item = JSONArray()
                 for (d in devices) {
@@ -144,7 +144,7 @@ class TwsManager(context: Context) {
                 }
                 array.put(item)
                 withContext(Dispatchers.IO) {
-                    SPreferences.putTwsDevices(array)
+                    Preferences.putTwsDevices(array)
                 }
             }
         }
@@ -152,7 +152,7 @@ class TwsManager(context: Context) {
 
     fun removeDevices(devices: Collection<BluetoothDevice>) {
         CoroutineScope(Dispatchers.Default).launch {
-            val array: JSONArray = SPreferences.getTwsDevices()
+            val array: JSONArray = Preferences.getTwsDevices()
             val devicesVailed = isContains(array.toString(), devices) as MutableSet<BluetoothDevice>
             for (i in array.length() - 1 downTo 0) {
                 if (devicesVailed.isEmpty())
@@ -169,7 +169,7 @@ class TwsManager(context: Context) {
                 } catch (ignored: JSONException) {
                 }
             }
-            SPreferences.putTwsDevices(array)
+            Preferences.putTwsDevices(array)
         }
     }
 }

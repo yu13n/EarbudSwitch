@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.motion.widget.MotionLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:layoutDescription="@xml/activity_main_scene">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="0dp"
+        android:layout_height="?attr/actionBarSize"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:title="@string/app_title" />
+
+    <!--黑白名单 & TWS列表-->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/container_device"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginBottom="6dp"
+        android:alpha="1.0"
+        android:visibility="visible"
+        app:cardCornerRadius="8dp"
+        app:layout_constraintBottom_toTopOf="@id/container_settings"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintVertical_weight="4">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+                android:id="@+id/swipeRefresh"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:scrollbars="none">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rc_devices"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:fadingEdgeLength="20dp"
+                    android:overScrollMode="never"
+                    android:requiresFadingEdge="vertical" />
+            </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+
+            <ImageView
+                android:id="@+id/bth_off_image"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="2"
+                android:src="@drawable/ic_raised_eyebrow"
+                android:visibility="gone"
+                app:tint="?android:attr/colorForeground" />
+
+            <TextView
+                android:id="@+id/bth_off_text"
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_gravity="center"
+                android:layout_weight="1"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="center_horizontal"
+                android:text="@string/bluetooth_off"
+                android:textSize="18sp"
+                android:visibility="gone" />
+
+
+            <androidx.appcompat.widget.AppCompatSpinner
+                android:id="@+id/filterModeSpinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:entries="@array/filterModeArray"
+                android:paddingVertical="8dp" />
+        </LinearLayout>
+
+    </androidx.cardview.widget.CardView>
+
+    <!--通讯逻辑 & 隐私设置 & 验证密钥-->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/container_settings"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="12dp"
+        android:alpha="1.0"
+        android:visibility="visible"
+        app:cardCornerRadius="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/container_device"
+        app:layout_constraintVertical_weight="3" />
+
+    <ImageView
+        android:id="@+id/image_qr_code"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="12dp"
+        android:adjustViewBounds="true"
+        android:contentDescription="@string/text_qr_code"
+        android:scaleType="fitXY"
+        android:src="@drawable/ic_chicken"
+        android:translationZ="2dp"
+        app:layout_constraintBottom_toTopOf="@id/sw_lan"
+        app:layout_constraintEnd_toEndOf="@id/container_settings"
+        app:layout_constraintStart_toStartOf="@id/container_settings"
+        app:layout_constraintTop_toTopOf="@id/container_settings" />
+
+    <TextView
+        android:id="@+id/text_key"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="@id/image_qr_code"
+        app:layout_constraintStart_toStartOf="@id/image_qr_code"
+        app:layout_constraintTop_toBottomOf="@id/image_qr_code" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/buttonCamera"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="invisible"
+        app:backgroundTint="@color/fab_background"
+        app:fabCustomSize="60dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/buttonRefresh"
+        app:layout_constraintStart_toStartOf="@id/image_qr_code"
+        app:layout_constraintTop_toBottomOf="@id/image_qr_code"
+        app:maxImageSize="48dp"
+        app:srcCompat="@drawable/ic_camera" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/buttonRefresh"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="invisible"
+        app:backgroundTint="@color/fab_background"
+        app:fabCustomSize="60dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/image_qr_code"
+        app:layout_constraintStart_toEndOf="@id/buttonCamera"
+        app:layout_constraintTop_toBottomOf="@id/image_qr_code"
+        app:maxImageSize="30dp"
+        app:srcCompat="@drawable/ic_refresh_24" />
+
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/sw_lan"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:text="@string/switch_lan_enable"
+        android:translationZ="2dp"
+        app:layout_constraintBottom_toTopOf="@id/sw_crashlytics"
+        app:layout_constraintEnd_toEndOf="@id/container_settings"
+        app:layout_constraintStart_toStartOf="@id/container_settings"
+        app:layout_constraintTop_toBottomOf="@id/image_qr_code" />
+
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/sw_crashlytics"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:text="@string/switch_crashlytics"
+        android:translationZ="2dp"
+        app:layout_constraintBottom_toBottomOf="@id/container_settings"
+        app:layout_constraintEnd_toEndOf="@id/container_settings"
+        app:layout_constraintStart_toStartOf="@id/container_settings"
+        app:layout_constraintTop_toBottomOf="@id/sw_lan" />
+
+
+</androidx.constraintlayout.motion.widget.MotionLayout>

@@ -1,8 +1,8 @@
 package app.tuuure.earbudswitch.utils
 
+import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
-import app.tuuure.earbudswitch.EBSApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -10,15 +10,15 @@ import org.json.JSONArray
 import org.json.JSONException
 import java.util.*
 
-object SPreferences {
-    private const val SP_SETTINGS_NAME = "Settings"
-    private val sp: SharedPreferences = EBSApp.getContext().getSharedPreferences(
-            SP_SETTINGS_NAME,
-            MODE_PRIVATE
-    );
+class Preferences private constructor(context: Context) {
+    private val SP_SETTINGS_NAME = "Settings"
+    private val sp: SharedPreferences = context.applicationContext.getSharedPreferences(
+        SP_SETTINGS_NAME,
+        MODE_PRIVATE
+    )
     private var editor: SharedPreferences.Editor = sp.edit()
 
-    private const val KEY_NAME = "key"
+    private val KEY_NAME = "key"
 
     fun putKey(key: String?) {
         CoroutineScope(Dispatchers.IO).launch {
@@ -27,10 +27,10 @@ object SPreferences {
         }
     }
 
-    suspend fun getKey(): String =
-            sp.getString(KEY_NAME, "") as String
+    fun getKey(): String =
+        sp.getString(KEY_NAME, "") as String
 
-    private const val RESTRICT_MODE_NAME = "restrict"
+    private val RESTRICT_MODE_NAME = "restrict"
 
     enum class RestrictMode {
         ALLOW, //ALLOW
@@ -45,26 +45,26 @@ object SPreferences {
     }
 
     fun getRestrictMode(): String =
-            try {
-                RestrictMode.valueOf(sp.getString(RESTRICT_MODE_NAME, "").toString()).toString()
-            } catch (e: IllegalArgumentException) {
-                RestrictMode.BLOCK.toString()
-            }
+        try {
+            RestrictMode.valueOf(sp.getString(RESTRICT_MODE_NAME, "").toString()).toString()
+        } catch (e: IllegalArgumentException) {
+            RestrictMode.BLOCK.toString()
+        }
 
     private fun putRestrictItem(address: MutableSet<String>) {
         editor.putStringSet(getRestrictMode().toLowerCase(Locale.ROOT), address)
         editor.apply()
     }
 
-    suspend fun addRestrictItem(address: MutableCollection<String>) {
+    fun addRestrictItem(address: String) {
         val list = HashSet(getRestrictItem())
-        list.addAll(address)
+        list.add(address)
         putRestrictItem(list)
     }
 
-    suspend fun delRestrictItem(address: MutableCollection<String>) {
+    fun delRestrictItem(address: String) {
         val list = HashSet(getRestrictItem())
-        list.removeAll(address)
+        list.remove(address)
         putRestrictItem(list)
     }
 
@@ -73,24 +73,26 @@ object SPreferences {
     }
 
     private fun getRestrictItem(restrictList: String): MutableSet<String> =
-            sp.getStringSet(restrictList, HashSet()) as MutableSet<String>
+        sp.getStringSet(restrictList, HashSet()) as MutableSet<String>
 
     fun checkRestricted(address: String): Boolean =
-            (getRestrictMode() == RestrictMode.ALLOW.toString()) xor (address in getRestrictItem())
+        (getRestrictMode() == RestrictMode.ALLOW.toString()) xor (address in getRestrictItem())
 
-    private const val TWS_NAME = "twsDevices"
+    private val TWS_NAME = "twsDevices"
 
     fun getTwsDevices(): JSONArray =
-            try {
-                JSONArray(sp.getString(TWS_NAME, ""))
-            } catch (e: JSONException) {
-                JSONArray()
-            }
+        try {
+            JSONArray(sp.getString(TWS_NAME, ""))
+        } catch (e: JSONException) {
+            JSONArray()
+        }
 
-    suspend fun putTwsDevices(jsonArray: JSONArray) {
+    fun putTwsDevices(jsonArray: JSONArray) {
         CoroutineScope(Dispatchers.IO).launch {
             editor.putString(TWS_NAME, jsonArray.toString())
             editor.apply()
         }
     }
+
+    companion object : SingletonHolder<Preferences, Context>(::Preferences)
 }

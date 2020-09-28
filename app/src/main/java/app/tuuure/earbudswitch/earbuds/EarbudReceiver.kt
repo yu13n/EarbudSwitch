@@ -1,23 +1,18 @@
 package app.tuuure.earbudswitch.earbuds
 
-import android.bluetooth.BluetoothA2dp
-import android.bluetooth.BluetoothClass
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothProfile
+import android.bluetooth.*
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.util.Log
-import app.tuuure.earbudswitch.EventTag
-import app.tuuure.earbudswitch.ParamTarget
+import app.tuuure.earbudswitch.CancelAdvertiseEvent
 import app.tuuure.earbudswitch.utils.Preferences
-import com.drake.channel.sendEvent
+import org.greenrobot.eventbus.EventBus
 
 class EarbudReceiver : BroadcastReceiver() {
     fun startService(context: Context?, device: BluetoothDevice, state: Int) {
         val service = Intent(context, EarbudService::class.java)
-        service.putExtra(BluetoothDevice.EXTRA_DEVICE, device)
+        service.putExtra(BluetoothDevice.EXTRA_DEVICE, device.address)
         service.putExtra(BluetoothProfile.EXTRA_STATE, state)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             context!!.startForegroundService(service)
@@ -29,23 +24,19 @@ class EarbudReceiver : BroadcastReceiver() {
         val device: BluetoothDevice? = intent?.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
         if (device == null || device.name == null || device.name.isEmpty() || device.bluetoothClass.majorDeviceClass != BluetoothClass.Device.Major.AUDIO_VIDEO)
             return
-        if (BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED == intent.action) {
+        if (BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED == intent.action || BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED == intent.action) {
             val state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1)
             when (state) {
-                BluetoothA2dp.STATE_CONNECTED -> {
-                    if (!Preferences.checkRestricted(device.address)) {
+                BluetoothProfile.STATE_CONNECTED -> {
+                    if (!Preferences.getInstance(context!!).checkRestricted(device.address)) {
+                        //Log.d("TAG", "CONNECTED")
+                        // 已连接到设备，开始广播
                         startService(context, device, state)
-                        Log.d("TAG","startService")
                     }
                 }
-                BluetoothA2dp.STATE_CONNECTING -> {
-                    startService(context, device, state)
-                }
-                BluetoothA2dp.STATE_DISCONNECTED -> {
-                    sendEvent(
-                        ParamTarget(device.address),
-                        EventTag.TYPE_RESULT + EventTag.DISCONNECT
-                    )
+                BluetoothProfile.STATE_DISCONNECTED -> {
+                    //Log.d("TAG", "DISCONNECTED")
+                    EventBus.getDefault().post(CancelAdvertiseEvent(device.address))
                 }
             }
         }

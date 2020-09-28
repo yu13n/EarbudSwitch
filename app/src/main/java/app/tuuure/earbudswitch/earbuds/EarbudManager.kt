@@ -1,109 +1,111 @@
 package app.tuuure.earbudswitch.earbuds
 
+import android.annotation.SuppressLint
 import android.bluetooth.*
-import androidx.collection.ArrayMap
-import app.tuuure.earbudswitch.EventTag
-import app.tuuure.earbudswitch.ParamTarget
-import app.tuuure.earbudswitch.ParamUnit
-import com.drake.channel.AndroidScope
-import com.drake.channel.receiveEvent
-import kotlinx.coroutines.cancel
+import android.content.Context
 import java.lang.reflect.Method
 
-class EarbudManager(context: EarbudService) {
+class EarbudManager {
     companion object {
         @JvmStatic
-        fun getAudioDevices(): MutableMap<String, String> {
-            val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-            val devices = ArrayMap<String, String>()
-            for (d in bluetoothAdapter.bondedDevices) {
-                if ((d.name != null) and
-                    (d.name.isNotEmpty()) and
-                    (d.bluetoothClass.majorDeviceClass == BluetoothClass.Device.Major.AUDIO_VIDEO)
-                )
-                    devices.put(d.name, d.address)
+        fun getAudioDevices(): List<BluetoothDevice> =
+            BluetoothAdapter.getDefaultAdapter().bondedDevices.filterNot {
+                it.name.isNullOrEmpty()
+                        || it.bluetoothClass.majorDeviceClass != BluetoothClass.Device.Major.AUDIO_VIDEO
             }
-            return devices
+
+        // Android 4.0.4_r2.1
+        @SuppressLint("DiscouragedPrivateApi")
+        private val a2dpDisconnectMethod: Method =
+            BluetoothA2dp::class.java.getDeclaredMethod("disconnect", BluetoothDevice::class.java)
+        private val headsetDisconnectMethod: Method =
+            BluetoothHeadset::class.java.getDeclaredMethod(
+                "disconnect",
+                BluetoothDevice::class.java
+            )
+
+        // Android 4.0.4_r2.1
+        @SuppressLint("DiscouragedPrivateApi")
+        private val a2dpConnectMethod: Method =
+            BluetoothA2dp::class.java.getDeclaredMethod("connect", BluetoothDevice::class.java)
+        private val headsetConnectMethod: Method =
+            BluetoothHeadset::class.java.getDeclaredMethod("connect", BluetoothDevice::class.java)
+
+        private enum class OPERATION {
+            connect,
+            disconnect
         }
 
-    }
-
-    private val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-    private lateinit var bluetoothA2dp: BluetoothA2dp
-    private lateinit var bluetoothHeadset: BluetoothHeadset
-
-    // Android 4.0.4_r2.1
-    private val a2dpDisconnectMethod: Method =
-        BluetoothA2dp::class.java.getDeclaredMethod("disconnect", BluetoothDevice::class.java)
-    private val headsetDisconnectMethod: Method =
-        BluetoothHeadset::class.java.getDeclaredMethod("disconnect", BluetoothDevice::class.java)
-
-    // Android 4.0.4_r2.1
-    private val a2dpConnectMethod: Method =
-        BluetoothA2dp::class.java.getDeclaredMethod("connect", BluetoothDevice::class.java)
-    private val headsetConnectMethod: Method =
-        BluetoothHeadset::class.java.getDeclaredMethod("connect", BluetoothDevice::class.java)
-
-    init {
-        val proxyListener = object : BluetoothProfile.ServiceListener {
-            override fun onServiceConnected(profile: Int, proxy: BluetoothProfile?) {
-                when (profile) {
-                    BluetoothProfile.A2DP ->
-                        bluetoothA2dp = proxy as BluetoothA2dp
-                    BluetoothProfile.HEADSET ->
-                        bluetoothHeadset = proxy as BluetoothHeadset
-                    else ->
-                        return
+        @JvmStatic
+        private fun profileAgent(context: Context, op: OPERATION, device: BluetoothDevice) {
+            val proxyListener = object : BluetoothProfile.ServiceListener {
+                override fun onServiceConnected(profile: Int, proxy: BluetoothProfile?) {
+                    when (profile) {
+                        BluetoothProfile.A2DP -> {
+                            val bluetoothA2dp = proxy as BluetoothA2dp
+                            when (op) {
+                                OPERATION.connect -> {
+                                    if (!bluetoothA2dp.connectedDevices.contains(device))
+                                        a2dpConnectMethod.invoke(bluetoothA2dp, device)
+                                }
+                                OPERATION.disconnect -> {
+                                    if (bluetoothA2dp.connectedDevices.contains(device)) {
+                                        a2dpDisconnectMethod.invoke(bluetoothA2dp, device)
+                                    }
+                                }
+                            }
+                        }
+                        BluetoothProfile.HEADSET -> {
+                            val bluetoothHeadset = proxy as BluetoothHeadset
+                            when (op) {
+                                OPERATION.connect -> {
+                                    if (!bluetoothHeadset.connectedDevices.contains(device))
+                                        headsetConnectMethod.invoke(bluetoothHeadset, device)
+                                }
+                                OPERATION.disconnect -> {
+                                    if (bluetoothHeadset.connectedDevices.contains(device)) {
+                                        headsetDisconnectMethod.invoke(bluetoothHeadset, device)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    BluetoothAdapter.getDefaultAdapter().closeProfileProxy(profile, proxy)
                 }
+
+                override fun onServiceDisconnected(profile: Int) {}
             }
-
-            override fun onServiceDisconnected(profile: Int) {
-            }
-        }
-        bluetoothAdapter.getProfileProxy(context, proxyListener, BluetoothProfile.A2DP)
-        bluetoothAdapter.getProfileProxy(context, proxyListener, BluetoothProfile.HEADSET)
-    }
-
-    private val scrolls = ArrayList<AndroidScope>()
-
-    init {
-        scrolls.add(receiveEvent<ParamTarget>(EventTag.CONNECT) {
-            connect(bluetoothAdapter.getRemoteDevice(it.target))
-        })
-        scrolls.add(receiveEvent<ParamUnit>(EventTag.DISCONNECT) {
-            disconnect(null)
-        })
-    }
-
-    fun unregister() {
-        bluetoothAdapter.closeProfileProxy(BluetoothProfile.A2DP, bluetoothA2dp)
-        bluetoothAdapter.closeProfileProxy(BluetoothProfile.HEADSET, bluetoothHeadset)
-        for (scope in scrolls) {
-            scope.cancel()
-        }
-    }
-
-    fun connect(device: BluetoothDevice) {
-        a2dpConnectMethod.invoke(bluetoothA2dp, device)
-        headsetConnectMethod.invoke(bluetoothHeadset, device)
-    }
-
-    fun disconnect(device: BluetoothDevice?) {
-        if (device == null) {
-            val devices = bluetoothA2dp.connectedDevices
-            devices.addAll(bluetoothHeadset.connectedDevices)
-            for (d in devices) {
-                a2dpDisconnectMethod.invoke(bluetoothA2dp, d)
-                headsetDisconnectMethod.invoke(bluetoothHeadset, d)
-            }
-        } else {
-            a2dpDisconnectMethod.invoke(bluetoothA2dp, device)
-            headsetDisconnectMethod.invoke(bluetoothHeadset, device)
+            val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+            bluetoothAdapter.getProfileProxy(context, proxyListener, BluetoothProfile.A2DP)
+            bluetoothAdapter.getProfileProxy(context, proxyListener, BluetoothProfile.HEADSET)
         }
 
-    }
+        @JvmStatic
+        fun connectEBS(context: Context, device: BluetoothDevice) {
+            profileAgent(context, OPERATION.connect, device)
+        }
 
-    fun getConnectedA2dpDevices(): MutableSet<BluetoothDevice>? {
-        return bluetoothA2dp.connectedDevices?.toMutableSet()
+        @JvmStatic
+        fun connectEBS(context: Context, device: String) {
+            profileAgent(
+                context,
+                OPERATION.connect,
+                BluetoothAdapter.getDefaultAdapter().getRemoteDevice(device)
+            )
+        }
+
+        @JvmStatic
+        fun disconnectEBS(context: Context, device: BluetoothDevice) {
+            profileAgent(context, OPERATION.disconnect, device)
+        }
+
+        @JvmStatic
+        fun disconnectEBS(context: Context, device: String) {
+            profileAgent(
+                context,
+                OPERATION.disconnect,
+                BluetoothAdapter.getDefaultAdapter().getRemoteDevice(device)
+            )
+        }
     }
 }

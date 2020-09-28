@@ -15,7 +15,7 @@ import org.json.JSONArray
 import org.json.JSONException
 import java.lang.reflect.Method
 
-class TwsManager(context: Context) {
+class TwsManager(val context: Context) {
     /*
     public static final int SOURCE_CODEC_TYPE_SBC = 0;
     public static final int SOURCE_CODEC_TYPE_AAC = 1;
@@ -108,7 +108,7 @@ class TwsManager(context: Context) {
     ): Collection<BluetoothDevice> = devices.filter { array.contains(it.address) }
 
     fun getTwsDevice(device: BluetoothDevice): BluetoothDevice? {
-        val array: JSONArray = Preferences.getTwsDevices()
+        val array: JSONArray = Preferences.getInstance(context).getTwsDevices()
         if (isContains(array.toString(), setOf(device)).isNotEmpty()) return null
 
         var address: String? = null
@@ -136,7 +136,7 @@ class TwsManager(context: Context) {
 
     fun addDevices(devices: Collection<BluetoothDevice>) {
         CoroutineScope(Dispatchers.Default).launch {
-            val array: JSONArray = Preferences.getTwsDevices()
+            val array: JSONArray = Preferences.getInstance(context).getTwsDevices()
             if ((devices.size == 2) and (isContains(array.toString(), devices).size == 2)) {
                 val item = JSONArray()
                 for (d in devices) {
@@ -144,7 +144,7 @@ class TwsManager(context: Context) {
                 }
                 array.put(item)
                 withContext(Dispatchers.IO) {
-                    Preferences.putTwsDevices(array)
+                    Preferences.getInstance(context).putTwsDevices(array)
                 }
             }
         }
@@ -152,7 +152,7 @@ class TwsManager(context: Context) {
 
     fun removeDevices(devices: Collection<BluetoothDevice>) {
         CoroutineScope(Dispatchers.Default).launch {
-            val array: JSONArray = Preferences.getTwsDevices()
+            val array: JSONArray = Preferences.getInstance(context).getTwsDevices()
             val devicesVailed = isContains(array.toString(), devices) as MutableSet<BluetoothDevice>
             for (i in array.length() - 1 downTo 0) {
                 if (devicesVailed.isEmpty())
@@ -169,7 +169,7 @@ class TwsManager(context: Context) {
                 } catch (ignored: JSONException) {
                 }
             }
-            Preferences.putTwsDevices(array)
+            Preferences.getInstance(context).putTwsDevices(array)
         }
     }
 }

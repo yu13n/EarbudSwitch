@@ -18,6 +18,8 @@ class Preferences private constructor(context: Context) {
     )
     private var editor: SharedPreferences.Editor = sp.edit()
 
+    companion object : SingletonHolder<Preferences, Context>(::Preferences)
+
     private val KEY_NAME = "key"
 
     fun putKey(key: String?) {
@@ -93,6 +95,4 @@ class Preferences private constructor(context: Context) {
             editor.apply()
         }
     }
-
-    companion object : SingletonHolder<Preferences, Context>(::Preferences)
 }

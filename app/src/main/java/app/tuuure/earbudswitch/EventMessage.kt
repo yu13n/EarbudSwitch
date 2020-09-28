@@ -1,48 +1,19 @@
 package app.tuuure.earbudswitch
 
-data class ParamDevices(val devices: Collection<String>) {
-    override fun toString(): String {
-        return "devices= $devices"
-    }
-}
+import android.bluetooth.BluetoothDevice
 
-data class ParamTarget(val target: String) {
-    override fun toString(): String {
-        return "target= $target"
-    }
-}
+data class ScanEvent(val devices: Collection<BluetoothDevice>)
 
-data class ParamString(val content: String) {
-    override fun toString(): String {
-        return "content= $content"
-    }
-}
+data class ScanResultEvent(
+    val server: String,
+    val devices: Collection<String>,
+    val isFound: Boolean = true
+)
 
-data class ParamServer(val server: String, val devices: Collection<String>) {
-    override fun toString(): String {
-        return "server= $server --devices= $devices"
-    }
-}
+data class DisconnectEvent(val device: String)
 
-data class ParamUnit(val message: String = "") {
-    override fun toString(): String {
-        return "message= $message"
-    }
-}
+data class CancelAdvertiseEvent(val device: String)
 
-class EventTag {
-    companion object {
-        const val SCAN = "scan_tag"
-        const val CONNECT_GATT = "connect_gatt_tag"
-        const val NOTIFY = "notify_tag"
-        const val WRITE = "write_tag"
-        const val CONNECT = "connect_tag"
-        const val ADVERTISE = "advertise_tag"
-        const val NOTIFIED = "notified_tag"
-        const val WRITTEN = "written_tag"
-        const val DISCONNECT = "disconnect_tag"
-        const val STOP_SERVICE = "stop_self_tag"
-        const val TYPE_RESULT = "result_"
-        const val TYPE_RECEIVER = "receiver_"
-    }
-}
+data class ConnectGattEvent(val server: String, val device: String)
+
+data class RefreshEvent(val device: String, val isFreshing: Boolean)

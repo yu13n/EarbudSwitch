@@ -3,16 +3,20 @@ package app.tuuure.earbudswitch.nearby.ble
 import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.*
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.ParcelUuid
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import app.tuuure.earbudswitch.RadarReceiver
+import app.tuuure.earbudswitch.ScanResultEvent
 import app.tuuure.earbudswitch.nearby.IScanner
 import app.tuuure.earbudswitch.utils.CryptoConvert.Companion.bytesToUUID
 import app.tuuure.earbudswitch.utils.CryptoConvert.Companion.md5code32
+import org.greenrobot.eventbus.EventBus
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -53,14 +57,21 @@ class BleScanner constructor(
             val scanRecord = result.scanRecord!!
             val deviceList = deviceMap.filterKeys { it in scanRecord.serviceUuids }
 
-            //TODO 返回扫描结果
-//            when (callbackType) {
-//                ScanSettings.CALLBACK_TYPE_MATCH_LOST -> EventBus.getDefault()
-//                    .post(ScanResultEvent("", deviceList.values))
-//                ScanSettings.CALLBACK_TYPE_FIRST_MATCH -> EventBus.getDefault()
-//                    .post(ScanResultEvent(server.address, deviceList.values))
-//            }
+            when (callbackType) {
+                ScanSettings.CALLBACK_TYPE_MATCH_LOST -> {
+                    EventBus.getDefault()
+                        .post(ScanResultEvent(server.address, deviceList.values, isFound = false))
+                }
+                ScanSettings.CALLBACK_TYPE_FIRST_MATCH, ScanSettings.CALLBACK_TYPE_ALL_MATCHES -> {
+                    EventBus.getDefault()
+                        .post(ScanResultEvent(server.address, deviceList.values, isFound = true))
+                }
+            }
             super.onScanResult(callbackType, result)
+        }
+
+        override fun onScanFailed(errorCode: Int) {
+            Toast.makeText(context, codeStrize(errorCode), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -77,7 +88,7 @@ class BleScanner constructor(
 
 
     @SuppressLint("NewApi") //初始化isPersisted时，已解决兼容问题
-    override fun scan(devices: Collection<String>) {
+    override fun scan(devices: Collection<BluetoothDevice>) {
         stopScan()
 
         if (devices.isEmpty()) {
@@ -85,10 +96,10 @@ class BleScanner constructor(
         }
 
         val filters = ArrayList<ScanFilter>(devices.size)
-        for (address in devices) {
-            val hashedData: ByteArray = md5code32(address)
+        for (d in devices) {
+            val hashedData: ByteArray = md5code32(d.address)
             val parcelUuid = ParcelUuid(bytesToUUID(hashedData))
-            deviceMap[parcelUuid] = address
+            deviceMap[parcelUuid] = d.address
             val filter = ScanFilter.Builder()
                 .setServiceUuid(parcelUuid)
                 .build()
@@ -96,12 +107,13 @@ class BleScanner constructor(
         }
 
         val scanSettings = ScanSettings.Builder().apply {
-            setCallbackType(ScanSettings.CALLBACK_TYPE_FIRST_MATCH or ScanSettings.CALLBACK_TYPE_MATCH_LOST)
             setNumOfMatches(ScanSettings.MATCH_NUM_ONE_ADVERTISEMENT)
             if (isPersisted) {
+                setCallbackType(ScanSettings.CALLBACK_TYPE_FIRST_MATCH or ScanSettings.CALLBACK_TYPE_MATCH_LOST)
                 setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
                 setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
             } else {
+                setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
                 setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
                 setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
             }

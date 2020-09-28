@@ -7,8 +7,12 @@
         app:constraintSetEnd="@+id/end"
         app:constraintSetStart="@+id/start"
         motion:duration="1000"
-        motion:motionInterpolator="linear">
-        <OnSwipe app:touchAnchorId="@id/image_qr_code" />
+        motion:motionInterpolator="easeInOut">
+        <OnSwipe
+            app:dragDirection="dragUp"
+            app:maxAcceleration="40"
+            app:touchRegionId="@id/image_qr_code"
+            app:touchAnchorId="@id/image_qr_code" />
     </Transition>
 
     <ConstraintSet android:id="@+id/start">

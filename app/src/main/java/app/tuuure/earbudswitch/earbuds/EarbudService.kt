@@ -1,8 +1,6 @@
 package app.tuuure.earbudswitch.earbuds
 
-import android.annotation.SuppressLint
 import android.app.*
-import android.bluetooth.BluetoothA2dp
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothProfile
@@ -10,19 +8,16 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.os.Binder
 import android.os.Build
 import android.os.IBinder
-import android.util.Log
 import androidx.core.app.NotificationCompat
-import app.tuuure.earbudswitch.*
+import app.tuuure.earbudswitch.CancelAdvertiseEvent
+import app.tuuure.earbudswitch.DisconnectEvent
+import app.tuuure.earbudswitch.R
 import app.tuuure.earbudswitch.nearby.ble.BleAdvertiser
-import app.tuuure.earbudswitch.nearby.ble.BleScanner
-import com.drake.channel.AndroidScope
-import com.drake.channel.receiveEvent
-import com.drake.channel.sendEvent
-import kotlinx.coroutines.*
-import java.util.*
+import app.tuuure.earbudswitch.utils.Preferences
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
 
 class EarbudService : Service() {
     companion object {
@@ -38,33 +33,33 @@ class EarbudService : Service() {
     private lateinit var pendIntent: PendingIntent
     private lateinit var actionBuilder: NotificationCompat.Action.Builder
 
-    private val scrolls = ArrayList<AndroidScope>()
-    private lateinit var bleScanner: BleScanner
+    private lateinit var key: String
+    private lateinit var bluetoothAdapter: BluetoothAdapter
     private lateinit var bleAdvertiser: BleAdvertiser
-    private lateinit var earbudManager: EarbudManager
+
+    private val deviceList: HashSet<BluetoothDevice> = HashSet(2)
 
     override fun onCreate() {
         super.onCreate()
-        bleScanner = BleScanner(this@EarbudService, false)
-        bleAdvertiser = BleAdvertiser(this@EarbudService, false)
-        earbudManager = EarbudManager(this@EarbudService)
 
         notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         registerNotificationChannel()
-
         pendIntent = PendingIntent.getBroadcast(
-            this,
+            this@EarbudService,
             0,
             Intent(CHANNEL_ID),
             PendingIntent.FLAG_CANCEL_CURRENT
         )
         actionBuilder = NotificationCompat.Action.Builder(null, "Stop", pendIntent)
-
         notificationBuilder.setSmallIcon(R.drawable.ic_notify)
             .setColor(getColor(R.color.colorAccent))
             .setContentText(getString(R.string.notification_blank_content))
         notificationBuilder.addAction(actionBuilder.build())
         startForeground(NOTIFICATION_ID, notificationBuilder.build())
+
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+        key = Preferences.getInstance(this@EarbudService).getKey()
+        bleAdvertiser = BleAdvertiser(this@EarbudService, key)
 
         //注册用于关闭服务的receiver
         val intentFilter = IntentFilter()
@@ -72,65 +67,61 @@ class EarbudService : Service() {
         intentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
         registerReceiver(receiver, intentFilter)
 
-        scrolls.add(receiveEvent<ParamTarget>(EventTag.TYPE_RECEIVER + EventTag.DISCONNECT) {
-            //TODO:去除目标设备
-            stopSelf()
-        })
-        scrolls.add(receiveEvent<ParamUnit>(EventTag.STOP_SERVICE) {
-            stopSelf()
-        })
+        EventBus.getDefault().register(this@EarbudService)
     }
 
-    inner class LocalBinder : Binder() {
-        val service: EarbudService
-            get() = this@EarbudService
-    }
-
-    private val binder = LocalBinder()
-
-    @SuppressLint("RestrictedApi")
-    override fun onBind(intent: Intent?): IBinder? {
-        notificationBuilder.mActions.clear()
-        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
-
-        bleScanner.setBind()
-        bleAdvertiser.isBind = true
-        return binder
+    private fun updateDeviceList(device: BluetoothDevice): Boolean {
+        val result = !deviceList.contains(device)
+        if (result) {
+            deviceList.add(device)
+        }
+        return result
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        CoroutineScope(Dispatchers.Default).launch {
-            delay(2000)
-            val device: BluetoothDevice =
-                intent!!.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)!!
-            when (intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1)) {
-                BluetoothA2dp.STATE_CONNECTED -> {
-                    sendEvent(ParamDevices(listOf(device.address)), EventTag.ADVERTISE)
-                    Log.d("TAG", "sendAdvertise")
+        val device =
+            bluetoothAdapter.getRemoteDevice(intent!!.getStringExtra(BluetoothDevice.EXTRA_DEVICE))
+        val state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1)
+        if (state == BluetoothProfile.STATE_CONNECTED) {
+            val restartNeeded = updateDeviceList(device)
+            if (deviceList.size != 0) {
+                if (restartNeeded) {
+                    bleAdvertiser.advertise(deviceList)
                 }
-                BluetoothA2dp.STATE_CONNECTING -> {
-                    sendEvent(ParamDevices(listOf(device.address)), EventTag.SCAN)
-                    Log.d("TAG", "sendScan")
-                }
-                else -> {
-                }
+            } else {
+                stopSelf()
             }
         }
         return super.onStartCommand(intent, flags, startId)
     }
 
-    override fun onUnbind(intent: Intent?): Boolean {
-        stopSelf()
-        return super.onUnbind(intent)
+    @Subscribe
+    fun onCancelAdvertise(event: CancelAdvertiseEvent) {
+        val device = bluetoothAdapter.getRemoteDevice(event.device)
+        val restartNeeded = deviceList.contains(device)
+        deviceList.remove(device)
+
+        if (deviceList.size != 0) {
+            if (restartNeeded) {
+                bleAdvertiser.advertise(deviceList)
+            }
+        } else {
+            bleAdvertiser.stopAdvertise()
+            stopSelf()
+        }
+    }
+
+    @Subscribe
+    fun onDisconnectEvent(event: DisconnectEvent) {
+        val device = bluetoothAdapter.getRemoteDevice(event.device)
+        EarbudManager.disconnectEBS(this, device)
     }
 
     override fun onDestroy() {
-        earbudManager.unregister()
-        bleScanner.unregister()
-        bleAdvertiser.unregister()
+        EventBus.getDefault().unregister(this)
 
-        for (scope in scrolls) {
-            scope.cancel()
+        if (this@EarbudService::bleAdvertiser.isInitialized) {
+            bleAdvertiser.stopAdvertise()
         }
 
         try {
@@ -140,6 +131,8 @@ class EarbudService : Service() {
         stopForeground(true)
         super.onDestroy()
     }
+
+    override fun onBind(intent: Intent?): IBinder? = null
 
     private fun registerNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -161,7 +154,6 @@ class EarbudService : Service() {
     // 监听蓝牙关闭与自定义广播，用于关闭service
     private val receiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            Log.d("TAG", intent.action.toString())
             when (intent.action) {
                 BluetoothAdapter.ACTION_STATE_CHANGED -> {
                     val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)

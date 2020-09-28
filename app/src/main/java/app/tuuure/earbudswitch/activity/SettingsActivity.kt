@@ -23,6 +23,8 @@ import app.tuuure.earbudswitch.earbuds.EarbudManager.Companion.getAudioDevices
 import app.tuuure.earbudswitch.recyclerList.FilterListAdapter
 import app.tuuure.earbudswitch.recyclerList.ListItem
 import app.tuuure.earbudswitch.utils.ComponentEnableSettings
+import app.tuuure.earbudswitch.utils.CryptoConvert.Companion.bytesToUUID
+import app.tuuure.earbudswitch.utils.CryptoConvert.Companion.randomBytes
 import app.tuuure.earbudswitch.utils.KeyQRCode
 import app.tuuure.earbudswitch.utils.KeyQRCode.Companion.createQRCode
 import app.tuuure.earbudswitch.utils.Preferences
@@ -39,8 +41,6 @@ class SettingsActivity : AppCompatActivity() {
         const val KEY_EXTRA = "keyExtra"
         private const val REQUEST_CODE_SCAN = 12
     }
-
-    var isInitThisTime = false
 
     private var key: String? = null
     private lateinit var adapterFilter: FilterListAdapter
@@ -63,15 +63,17 @@ class SettingsActivity : AppCompatActivity() {
             val data: LinkedList<ListItem> = LinkedList()
             val devices = getAudioDevices()
             val restrictItems = Preferences.getInstance(this@SettingsActivity).getRestrictItem()
-            for (d in devices.entries) {
-                val isChecked = restrictItems.contains(d.value)
+            for (d in devices) {
+                val isChecked = restrictItems.contains(d.address)
                 if (isChecked) {
-                    data.addFirst(ListItem(d.key, d.value, isChecked))
+                    data.addFirst(ListItem(d.name, d.address, isChecked))
                 } else {
-                    data.addLast(ListItem(d.key, d.value, isChecked))
+                    data.addLast(ListItem(d.name, d.address, isChecked))
                 }
             }
-            adapterFilter.updateData(data)
+            withContext(Dispatchers.Main){
+                adapterFilter.updateData(data)
+            }
         }
     }
 
@@ -114,9 +116,6 @@ class SettingsActivity : AppCompatActivity() {
             unregisterReceiver(receiver)
         } catch (ignored: IllegalArgumentException) {
         }
-        if (isInitThisTime) {
-            ComponentEnableSettings.setEnableSettings(this, true)
-        }
         super.onPause()
     }
 
@@ -141,7 +140,7 @@ class SettingsActivity : AppCompatActivity() {
             override fun onNothingSelected(adapterView: AdapterView<*>?) {}
         }
 
-        adapterFilter = FilterListAdapter(this);
+        adapterFilter = FilterListAdapter(this)
         rc_devices.layoutManager = LinearLayoutManager(this)
         rc_devices.adapter = adapterFilter
 
@@ -178,7 +177,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         buttonRefresh.setOnClickListener {
-            key = UUID.randomUUID().toString()
+            key = bytesToUUID(randomBytes(16)).toString()
             updateQRCode()
             Preferences.getInstance(this@SettingsActivity).putKey(key)
         }
@@ -218,7 +217,7 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == R.id.action_about) {
-            Toast.makeText(this, "About", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "About", Toast.LENGTH_SHORT).show()
         }
         return super.onOptionsItemSelected(item)
     }
@@ -241,10 +240,9 @@ class SettingsActivity : AppCompatActivity() {
                     }
                 }
                 REQUEST_CODE_WELCOME -> {
-                    key = UUID.randomUUID().toString()
+                    key = bytesToUUID(randomBytes(16)).toString()
                     Preferences.getInstance(this@SettingsActivity).putKey(key)
                     updateQRCode()
-                    isInitThisTime = true
                 }
             }
         }

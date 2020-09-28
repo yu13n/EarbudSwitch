@@ -1,9 +1,9 @@
 package app.tuuure.earbudswitch.utils
 
-import android.util.Log
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.security.SecureRandom
 import java.util.*
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -14,8 +14,6 @@ class CryptoConvert {
         private const val KEY_MAC_SHA1 = "HmacSHA1"
         private const val KEY_MD5 = "MD5"
 
-        private const val PERIOD = 5000
-
         @JvmStatic
         fun md5code32(content: String): ByteArray {
             return MessageDigest.getInstance(KEY_MD5)
@@ -23,41 +21,21 @@ class CryptoConvert {
         }
 
         @JvmStatic
-        fun tOTPGenerater(key: String): Int {
-            val sks = SecretKeySpec(key.toByteArray(), KEY_MAC_SHA1)
-            val mac = Mac.getInstance(KEY_MAC_SHA1)
-            mac.init(sks)
-            val time = System.currentTimeMillis() / PERIOD
-            Log.d("TIME", time.toString())
-            val value = ByteBuffer.allocate(8).putLong(time).array()
-
-            return otpSlicer(mac.doFinal(value))
+        fun randomBytes(length: Int): ByteArray {
+            val ng = SecureRandom()
+            val bytes = ByteArray(length)
+            ng.nextBytes(bytes)
+            return bytes
         }
 
         @JvmStatic
-        suspend fun tOTPChecker(key: String): Collection<Int> {
+        fun otpGenerater(key: String, salt: ByteArray): ByteArray {
             val sks = SecretKeySpec(key.toByteArray(), KEY_MAC_SHA1)
             val mac = Mac.getInstance(KEY_MAC_SHA1)
             mac.init(sks)
-            val time = System.currentTimeMillis() / PERIOD
-            Log.d("TIME", time.toString())
-            val value1 = ByteBuffer.allocate(8).putLong(time).array()
-            val data1 = otpSlicer(mac.doFinal(value1))
-
-            val value2 = ByteBuffer.allocate(8).putLong(time - 1).array()
-            val data2 = otpSlicer(mac.doFinal(value2))
-
-            return listOf(data1, data2)
-        }
-
-        @JvmStatic
-        private fun otpSlicer(hash: ByteArray): Int {
+            val hash = mac.doFinal(salt)
             val offset: Int = hash.get(hash.size - 1).toInt() and 0xF
-            var binary: Int = (hash.get(offset).toInt() and 0x7F) shl 0x18
-            binary = binary or (hash.get(offset + 1).toInt() and 0xFF shl 0x10)
-            binary = binary or (hash.get(offset + 2).toInt() and 0xFF shl 0x08)
-            binary = binary or (hash.get(offset + 3).toInt() and 0xFF)
-            return binary
+            return hash.copyOfRange(offset, offset + 3)
         }
 
         @JvmStatic

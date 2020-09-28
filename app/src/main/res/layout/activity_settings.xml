@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    app:layoutDescription="@xml/activity_main_scene">
+    app:layoutDescription="@xml/activity_settings_scene">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
@@ -57,14 +57,14 @@
                 android:id="@+id/bth_off_image"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="2"
+                android:layout_weight="3"
                 android:src="@drawable/ic_raised_eyebrow"
                 android:visibility="gone"
                 app:tint="?android:attr/colorForeground" />
 
             <TextView
                 android:id="@+id/bth_off_text"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_gravity="center"
                 android:layout_weight="1"
@@ -100,7 +100,11 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/container_device"
-        app:layout_constraintVertical_weight="3" />
+        app:layout_constraintVertical_weight="3" >
+
+    </androidx.cardview.widget.CardView>
+
+
 
     <ImageView
         android:id="@+id/image_qr_code"

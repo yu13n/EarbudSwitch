@@ -3,9 +3,11 @@ package app.tuuure.earbudswitch.nearby.ble
 import android.bluetooth.*
 import android.content.Context
 import android.util.Log
+import app.tuuure.earbudswitch.RefreshEvent
+import app.tuuure.earbudswitch.earbuds.EarbudManager
 import app.tuuure.earbudswitch.nearby.IConnecter
 import app.tuuure.earbudswitch.utils.CryptoConvert
-import java.nio.ByteBuffer
+import org.greenrobot.eventbus.EventBus
 import java.util.*
 
 class BleConnecter constructor(
@@ -19,14 +21,28 @@ class BleConnecter constructor(
     private val bluetoothAdapter: BluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
     private lateinit var bluetoothGatt: BluetoothGatt
 
-
     override fun connect(server: String, device: String) {
         val bluetoothGattCallback: BluetoothGattCallback = object : BluetoothGattCallback() {
             override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
                 super.onConnectionStateChange(gatt, status, newState)
                 if (status == BluetoothGatt.GATT_SUCCESS) {
-                    if (newState == BluetoothGatt.STATE_CONNECTED) {
-                        gatt.discoverServices()
+                    when (newState) {
+                        BluetoothGatt.STATE_CONNECTED -> {
+                            EventBus.getDefault().post(
+                                RefreshEvent(
+                                    device,
+                                    true
+                                )
+                            )
+                            gatt.discoverServices()
+                        }
+                        BluetoothGatt.STATE_DISCONNECTED ->
+                            EventBus.getDefault().post(
+                                RefreshEvent(
+                                    device,
+                                    false
+                                )
+                            )
                     }
                 }
             }
@@ -38,17 +54,28 @@ class BleConnecter constructor(
 
                     val bluetoothGattService = gatt.getService(uuid)
                     val gattCharacteristic = bluetoothGattService.getCharacteristic(uuid)
-                    gatt.setCharacteristicNotification(gattCharacteristic, true);
+                    gatt.readCharacteristic(gattCharacteristic)
 
+                    gatt.setCharacteristicNotification(gattCharacteristic, true)
                     val descriptor =
                         gattCharacteristic.getDescriptor(UUID.fromString(DescriptorUUID))
                     descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
                     gatt.writeDescriptor(descriptor)
+                }
+            }
 
-                    val authCode = CryptoConvert.tOTPGenerater(key)
+            override fun onCharacteristicRead(
+                gatt: BluetoothGatt?,
+                characteristic: BluetoothGattCharacteristic?,
+                status: Int
+            ) {
+                super.onCharacteristicRead(gatt, characteristic, status)
+                val salt = characteristic?.value
+                if (salt != null) {
+                    val authCode = CryptoConvert.otpGenerater(key, salt)
                     Log.d("TAG", authCode.toString())
-                    gattCharacteristic.value = ByteBuffer.allocate(8).putInt(authCode).array()
-                    gatt.writeCharacteristic(gattCharacteristic)
+                    characteristic.value = authCode
+                    gatt?.writeCharacteristic(characteristic)
                 }
             }
 
@@ -69,7 +96,7 @@ class BleConnecter constructor(
                 gatt.disconnect()
                 gatt.close()
 
-                //TODO 验证成功，连接耳机
+                EarbudManager.connectEBS(context, device)
 
                 super.onCharacteristicChanged(gatt, characteristic)
             }

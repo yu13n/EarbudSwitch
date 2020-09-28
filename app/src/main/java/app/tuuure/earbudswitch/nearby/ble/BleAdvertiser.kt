@@ -8,17 +8,13 @@ import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.os.ParcelUuid
 import android.util.Log
-import app.tuuure.earbudswitch.EventTag
-import app.tuuure.earbudswitch.ParamUnit
+import app.tuuure.earbudswitch.DisconnectEvent
 import app.tuuure.earbudswitch.nearby.IAdvertiser
 import app.tuuure.earbudswitch.utils.CryptoConvert.Companion.bytesToUUID
 import app.tuuure.earbudswitch.utils.CryptoConvert.Companion.md5code32
-import app.tuuure.earbudswitch.utils.CryptoConvert.Companion.tOTPChecker
-import com.drake.channel.sendEvent
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import java.nio.ByteBuffer
+import app.tuuure.earbudswitch.utils.CryptoConvert.Companion.otpGenerater
+import app.tuuure.earbudswitch.utils.CryptoConvert.Companion.randomBytes
+import org.greenrobot.eventbus.EventBus
 import java.util.*
 
 class BleAdvertiser(override val context: Context, override var key: String) : IAdvertiser {
@@ -31,11 +27,12 @@ class BleAdvertiser(override val context: Context, override var key: String) : I
     private lateinit var gattServer: BluetoothGattServer
     private val callbacks = ArrayList<AdvertiseCallback>(2)
     private val deviceMap: HashMap<UUID, String> = HashMap(2)
+    private var authCode: ByteArray? = null
 
     var gattServerCallback: BluetoothGattServerCallback = object : BluetoothGattServerCallback() {
-        //设备连接/断开连接回调
+
         override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
-            Log.d("TAG", "connected")
+            Log.d("ConnectionState", "${device.address} $newState")
             super.onConnectionStateChange(device, status, newState)
         }
 
@@ -45,11 +42,21 @@ class BleAdvertiser(override val context: Context, override var key: String) : I
             offset: Int,
             characteristic: BluetoothGattCharacteristic?
         ) {
-            //TODO 返回验证信息
+            val salt = randomBytes(8)
+
+            gattServer.sendResponse(
+                device,
+                requestId,
+                BluetoothGatt.GATT_SUCCESS,
+                0,
+                salt
+            )
+
+            authCode = otpGenerater(key, salt)
+
             super.onCharacteristicReadRequest(device, requestId, offset, characteristic)
         }
 
-        //特征值写入回调
         override fun onCharacteristicWriteRequest(
             device: BluetoothDevice,
             requestId: Int,
@@ -68,21 +75,19 @@ class BleAdvertiser(override val context: Context, override var key: String) : I
                     null
                 )
             }
-            CoroutineScope(Dispatchers.Default).launch {
-                val receivedCode = ByteBuffer.wrap(value).int
-                Log.d("TAG", receivedCode.toString())
 
-                val target = deviceMap[characteristic.uuid]!!
-                val authList = tOTPChecker(key)
+            val target = deviceMap[characteristic.uuid]!!
 
-                if (receivedCode in authList) {
-                    // TODO 验证成功 断开，并提醒对方
-                    sendEvent(ParamUnit(), EventTag.DISCONNECT)
-                    characteristic.setValue("");
-                    gattServer.notifyCharacteristicChanged(device, characteristic, false);
-                } else {
-                    gattServer.cancelConnection(device)
-                }
+            Log.d("value", value.toString())
+            Log.d("authCode", authCode.toString())
+
+            if (value.contentEquals(authCode)) {
+                EventBus.getDefault().post(DisconnectEvent(target))
+
+                characteristic.setValue("")
+                gattServer.notifyCharacteristicChanged(device, characteristic, false)
+            } else {
+                gattServer.cancelConnection(device)
             }
             super.onCharacteristicWriteRequest(
                 device,
@@ -111,7 +116,7 @@ class BleAdvertiser(override val context: Context, override var key: String) : I
                     BluetoothGatt.GATT_SUCCESS,
                     0,
                     null
-                );
+                )
             }
             super.onDescriptorWriteRequest(
                 device,
@@ -129,19 +134,27 @@ class BleAdvertiser(override val context: Context, override var key: String) : I
         .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER)
         .setConnectable(true)
         .setTimeout(0)
-        .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_LOW)
+        .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
         .build()
 
-    override fun advertise(devices: Collection<String>) {
+    private val advertiseCallback = object : AdvertiseCallback() {
+        override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
+            super.onStartSuccess(settingsInEffect)
+            callbacks.add(this)
+        }
+    }
+
+    override fun advertise(devices: Collection<BluetoothDevice>) {
         stopAdvertise()
 
         val bluetoothManager =
             context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         gattServer = bluetoothManager.openGattServer(context, gattServerCallback)
 
-        for (address in devices) {
-            val uuid = bytesToUUID(md5code32(address))
-            deviceMap[uuid] = address
+        for (d in devices) {
+            val uuid = bytesToUUID(md5code32(d.address))
+            Log.d("Advertise", uuid.toString())
+            deviceMap[uuid] = d.address
 
             val gattService = BluetoothGattService(uuid, BluetoothGattService.SERVICE_TYPE_PRIMARY)
             val gattCharacteristic = BluetoothGattCharacteristic(
@@ -152,8 +165,8 @@ class BleAdvertiser(override val context: Context, override var key: String) : I
             val descriptor = BluetoothGattDescriptor(
                 UUID.fromString(DescriptorUUID),
                 BluetoothGattDescriptor.PERMISSION_WRITE
-            );
-            gattCharacteristic.addDescriptor(descriptor);
+            )
+            gattCharacteristic.addDescriptor(descriptor)
             gattService.addCharacteristic(gattCharacteristic)
             gattServer.addService(gattService)
 
@@ -162,12 +175,7 @@ class BleAdvertiser(override val context: Context, override var key: String) : I
                 .setIncludeTxPowerLevel(false)
                 .addServiceUuid(ParcelUuid(uuid))
                 .build()
-            val advertiseCallback = object : AdvertiseCallback() {
-                override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
-                    callbacks.add(this)
-                    super.onStartSuccess(settingsInEffect)
-                }
-            }
+
             bluetoothLeAdvertiser.startAdvertising(
                 advertiseSettings,
                 advertiseData,
@@ -181,8 +189,9 @@ class BleAdvertiser(override val context: Context, override var key: String) : I
             for (callback in callbacks) {
                 bluetoothLeAdvertiser.stopAdvertising(callback)
             }
-            callbacks.clear()
             gattServer.clearServices()
+            deviceMap.clear()
+            callbacks.clear()
             gattServer.close()
         }
     }
